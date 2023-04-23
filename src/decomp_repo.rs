@@ -17,7 +17,7 @@ impl LocalDecompRepo {
 
     pub fn inquire() -> InquireResult<Option<LocalDecompRepo>> {
         CustomType::<LocalDecompRepo>::new("Path to existing decomp repository:")
-            .with_help_message("This is optional, skip to clone a new copy")
+            .with_help_message("This is optional, press ESC to clone a new copy")
             .prompt_skippable()
     }
 

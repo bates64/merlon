@@ -3,8 +3,8 @@ use clap::Parser;
 use anyhow::{Result, bail};
 use merlon::baserom::Baserom;
 use merlon::decomp_repo::LocalDecompRepo;
+use merlon::package_config::PackageConfig;
 
-/// Creates a new mod.
 #[derive(Parser, Debug)]
 pub struct Args {
     /// The name of the mod. This will be used as the mod's directory name.
@@ -60,6 +60,26 @@ pub fn run(args: Args) -> Result<()> {
     let baserom_path = baserom.path();
     let baserom_copy_path = mod_dir.join("papermario/ver/us/baserom.z64");
     fs::copy(baserom_path, baserom_copy_path)?;
+
+    // Write .gitignore
+    let gitignore_path = mod_dir.join(".gitignore");
+    let gitignore_contents = ".merlon\n";
+    fs::write(gitignore_path, gitignore_contents)?;
+
+    // Write merlon.toml
+    let merlon_toml_path = mod_dir.join("merlon.toml");
+    PackageConfig::default_for_mod(&mod_dir)?.write_to_file(&merlon_toml_path)?;
+
+    // Create initial commit
+    let status = Command::new("git")
+        .arg("commit")
+        .arg("-a")
+        .arg("-m").arg("initial commit")
+        .current_dir(&mod_dir)
+        .status()?;
+    if !status.success() {
+        bail!("failed to commit files to git repo");
+    }
 
     // Done
     println!("Created mod directory {:?}", mod_dir);

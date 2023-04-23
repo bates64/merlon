@@ -8,6 +8,10 @@ license = "MPL-2.0"
 
 [dependencies]
 anyhow = "1.0.70"
+chrono = "0.4.24"
 clap = { version = "4.2.4", features = ["derive"] }
+heck = "0.4.1"
 inquire = "0.6.1"
+serde = { version = "1.0.160", features = ["derive"] }
 shellexpand = "3.1.0"
+toml = "0.7.3"
