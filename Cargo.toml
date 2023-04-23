@@ -1,0 +1,13 @@
+[package]
+name = "merlon"
+version = "0.1.0"
+edition = "2021"
+authors = ["Alex Bates <alex@nanaian.town>"]
+description = "General-purpose Paper Mario (N64) modding tool"
+license = "MPL-2.0"
+
+[dependencies]
+anyhow = "1.0.70"
+clap = { version = "4.2.4", features = ["derive"] }
+inquire = "0.6.1"
+shellexpand = "3.1.0"
