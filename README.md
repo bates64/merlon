@@ -16,13 +16,29 @@ Features:
 - [ ] Shortcut to apply mods and compile
 - [ ] Shortcut to combine mods together to create modpacks
 
+## Quickstart
+
+1.  [Install Rust](https://rustup.rs/)
+2. `cargo install merlon`
+3. `merlon new my-mod`
+4. `cd my-mod`
+5. Make changes to `my-mod/papermario`. You can `git commit` within as usual.
+6. `merlon run` to compile and run the game with your mod applied
+7. `merlon pack my-mod.merlon` to package your mod into a distributable file
+8. `merlon apply other-mod.merlon` to apply another mod to your mod
+
 ## Supported platforms
 
 Merlon supports all platforms that the Paper Mario decompilation supports.
 
 - Linux
+    - Debian/Ubuntu
+    - Arch Linux
+    - openSUSE
+    - Alpine Linux
+    - Nix (nix-shell)
 - macOS
-- Windows (using Windows Subsystem for Linux 2)
+- Windows (Windows Subsystem for Linux 2)
 
 See the [decomp installation instructions](https://github.com/pmret/papermario/blob/main/INSTALL.md) for more information.
 
@@ -48,15 +64,7 @@ cargo install --path .
 
 ## Usage
 
-Merlon is a command-line tool. Use `merlon help` to see a list of commands.
-
-```
-cargo install merlon
-merlon new my-mod
-cd my-mod
-# make changes to my-mod/papermario as usual
-merlon run
-```
+Merlon is a command-line tool. Use `merlon help` for more information.
 
 ## Mod file format
 
