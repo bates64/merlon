@@ -46,7 +46,10 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
         let patches_dir = output_dir.join("patches");
         let tar_path = output_dir.join("patches.tar.bz2");
         let encrypted_path = output_dir.join("patches.enc");
+
+        // Create and clear output directory
         fs::create_dir_all(&patches_dir)?;
+        clear_dir(&patches_dir)?;
 
         // Write changes since `main` to directory
         let status = Command::new("git")
@@ -119,4 +122,17 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
     } else {
         bail!("output filename cannot be empty");
     }
+}
+
+fn clear_dir(dir: &PathBuf) -> Result<()> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            fs::remove_dir_all(&path)?;
+        } else {
+            fs::remove_file(&path)?;
+        }
+    }
+    Ok(())
 }
