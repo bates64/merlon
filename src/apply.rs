@@ -8,13 +8,13 @@ use crate::pack::get_and_check_mod_dir;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    /// Mod directory.
+    /// Mod directory to apply to.
     ///
     /// Defaults to the current directory.
     #[clap(short, long)]
     mod_dir: Option<PathBuf>,
 
-    /// Mod to apply.
+    /// Mod package to apply.
     input: PathBuf,
 }
 
