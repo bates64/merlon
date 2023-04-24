@@ -16,7 +16,7 @@ pub struct Args {
     skip_configure: bool,
 }
 
-pub fn run(args: Args) -> Result<()> {
+pub fn build_mod(args: Args) -> Result<PathBuf> {
     let mod_dir = get_and_check_mod_dir(args.mod_dir)?;
     let submodule_dir = mod_dir.join("papermario");
 
@@ -42,33 +42,5 @@ pub fn run(args: Args) -> Result<()> {
     if !status.success() {
         bail!("failed to build");
     }
-
-    // Run
-    let emulator = find_emulator()?;
-    Command::new(emulator)
-        .arg("ver/us/build/papermario.z64")
-        .current_dir(&submodule_dir)
-        .status()?;
-
-    Ok(())
-}
-
-pub fn find_emulator() -> Result<PathBuf> {
-    const EMULATOR_PATHS: &[&str] = &[
-        "/usr/bin/cen64",
-        "/usr/bin/ares",
-        "/Applications/ares.app/Contents/MacOS/ares",
-        "/usr/bin/mupen64plus",
-        "/usr/bin/retroarch",
-        "C:\\Program Files (x86)\\Project64 2.3\\Project64.exe",
-    ];
-
-    for path in EMULATOR_PATHS {
-        let path = PathBuf::from(path);
-        if path.exists() {
-            return Ok(path);
-        }
-    }
-
-    bail!("no known emulator installed");
+    Ok(submodule_dir.join("ver/us/build/papermario.z64"))
 }

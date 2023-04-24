@@ -4,7 +4,7 @@ use anyhow::Result;
 mod new;
 mod pack;
 mod apply;
-mod run;
+mod build;
 
 /// Mod manager for the Paper Mario (N64) decompilation.
 /// 
@@ -43,11 +43,14 @@ enum SubCommand {
     /// The patches are applied to the `papermario` submodule in the mod's directory.
     Pack(pack::Args),
 
-    /// Apply a mod package.
+    /// Apply a mod package to another mod.
     Apply(apply::Args),
 
     /// Run a mod in an emulator.
-    Run(run::Args),
+    Run(build::Args),
+
+    /// Build a mod into a ROM.
+    Build(build::Args),
 }
 
 fn main() -> Result<()> {
@@ -56,6 +59,17 @@ fn main() -> Result<()> {
         SubCommand::New(new_args) => new::run(new_args),
         SubCommand::Pack(package_args) => pack::run(package_args),
         SubCommand::Apply(apply_args) => apply::run(apply_args),
-        SubCommand::Run(run_args) => run::run(run_args),
+        SubCommand::Run(run_args) => {
+            let rom_path = build::build_mod(run_args)?;
+            merlon::emulator::run_rom(&rom_path)?;
+            Ok(())
+        },
+        SubCommand::Build(build_args) => {
+            let rom_path = build::build_mod(build_args)?;
+            println!("Output ROM: {}", rom_path.display());
+            println!("You can run this ROM with `merlon run`.");
+            println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
+            Ok(())
+        },
     }
 }
