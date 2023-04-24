@@ -5,7 +5,10 @@ mod new;
 mod pack;
 mod apply;
 
-/// General-purpose Paper Mario (N64) modding tool.
+/// Mod manager for the Paper Mario (N64) decompilation.
+/// 
+/// Merlon allows you to create mods that can be applied to the decomp source code, and to package mods
+/// into `.merlon` files that can be applied to a copy of the decomp source code.
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {

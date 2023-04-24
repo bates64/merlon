@@ -1,9 +1,13 @@
 # Merlon
 
-Merlon is a general-purpose modding tool for Paper Mario (N64).
+[![](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/test.yml?branch=main)](https://github.com/nanaian/mamar/actions)
+[![](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding-279322074412089344)
+
+Merlon is a mod manager for the Paper Mario (N64) decompilation. It allows you to create mods that can be applied to the decomp source code, and to package mods into `.merlon` files that can be applied to a copy of the decomp source code.
 
 Features:
 
+- [x] Create mods (`merlon new`)
 - [x] Package mods (`merlon pack`)
 - [x] Apply mods (`merlon apply`)
 - [x] View mod source code
