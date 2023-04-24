@@ -13,7 +13,7 @@ Features:
 - [x] Compile to a modded ROM (`merlon build`)
 - [x] Run the modded ROM (`merlon run`)
 - [x] Merge mods together to create modpacks (`merlon apply` multiple times)
-- [x] Experimental GUI support (`merlon gui`)
+- [x] Experimental GUI support (`merlon gui` when built with `--features gui`)
 - [ ] Shortcut to apply mods and compile
 - [ ] Shortcut to combine mods together to create modpacks
 

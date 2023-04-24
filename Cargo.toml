@@ -22,7 +22,7 @@ toml = "0.7.3"
 assert_cmd = "2.0.11"
 
 [features]
-default = ["gui"]
+default = []
 gui = ["dep:klask"]
 
 [patch.crates-io]
