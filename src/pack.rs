@@ -66,7 +66,7 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
             .arg("--")
             .arg("src")
             .arg("include")
-            .arg("assets") // Original assets should be gitignored
+            .arg("assets") //.arg(format!("assets/{}", package_name))
             .arg("ver/us")
             .current_dir(&submodule_dir)
             .status()?;

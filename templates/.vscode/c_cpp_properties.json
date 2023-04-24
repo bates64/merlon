@@ -1,0 +1,32 @@
+// https://github.com/nanaian/merlon/blob/main/templates/.vscode/c_cpp_properties.json
+{
+    "version": 4,
+    "configurations": [
+        {
+            "name": "papermario",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "${workspaceFolder}/papermario/include",
+                    "${workspaceFolder}/papermario/src"
+                ]
+            },
+            "includePath": [
+                "${workspaceFolder}/papermario/include",
+                "${workspaceFolder}/papermario/ver/us/build/include",
+                "${workspaceFolder}/papermario/src"
+            ],
+            "defines": [
+                "F3DEX_GBI_2",
+                "_LANGUAGE_C",
+                "_MIPS_SZLONG=32",
+                "VERSION=us",
+                "VERSION_US",
+                "SHIFT"
+            ],
+            "cStandard": "c89",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "${default}"
+        }
+    ]
+}

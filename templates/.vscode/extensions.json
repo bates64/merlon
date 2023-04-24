@@ -1,0 +1,12 @@
+// https://github.com/nanaian/merlon/blob/main/templates/.vscode/extensions.json
+{
+    "recommendations": [
+        "ms-vscode.cpptools",
+        "nanaian.vscode-star-rod",
+        "EditorConfig.EditorConfig",
+    ],
+    "unwantedRecommendations": [
+        "llvm-vs-code-extensions.vscode-clangd",
+        "nanaian.papermario",
+    ],
+}

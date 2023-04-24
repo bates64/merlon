@@ -20,7 +20,7 @@ pub fn run(args: Args) -> Result<()> {
     let local_decomp_repo = LocalDecompRepo::try_get()?;
 
     // Create mod dir
-    let mod_dir = std::env::current_dir()?.join(args.name);
+    let mod_dir = std::env::current_dir()?.join(&args.name);
     if mod_dir.exists() {
         bail!("directory {:?} already exists", mod_dir);
     }
@@ -41,7 +41,7 @@ pub fn run(args: Args) -> Result<()> {
         .arg("submodule")
         .arg("add")
         .arg("-b").arg("main");
-    if let Some(repo) = local_decomp_repo {
+    if let Some(repo) = local_decomp_repo.as_ref() {
         command.arg("--reference").arg(repo.path());
     }
     command
@@ -53,29 +53,27 @@ pub fn run(args: Args) -> Result<()> {
     }
 
     // Copy baserom
+    println!("Copying baserom...");
     let baserom_path = baserom.path();
     let baserom_copy_path = mod_dir.join("papermario/ver/us/baserom.z64");
     fs::copy(baserom_path, baserom_copy_path)?;
 
-    // Write .gitignore
-    let gitignore_path = mod_dir.join(".gitignore");
-    let gitignore_contents = include_str!("../templates/gitignore");
-    fs::write(gitignore_path, gitignore_contents)?;
+    // Copy template files
+    fs::write(mod_dir.join(".gitignore"), include_str!("../templates/gitignore"))?;
+    fs::create_dir(mod_dir.join(".vscode"))?;
+    fs::write(mod_dir.join(".vscode/c_cpp_properties.json"), include_str!("../templates/.vscode/c_cpp_properties.json"))?;
+    fs::write(mod_dir.join(".vscode/extensions.json"), include_str!("../templates/.vscode/extensions.json"))?;
+    fs::write(mod_dir.join(".vscode/settings.json"), include_str!("../templates/.vscode/settings.json"))?;
+    fs::write(mod_dir.join(".vscode/tasks.json"), include_str!("../templates/.vscode/tasks.json"))?;
 
     // Write merlon.toml
+    println!("Creating merlon.toml...");
     let merlon_toml_path = mod_dir.join("merlon.toml");
     PackageConfig::default_for_mod(&mod_dir)?.write_to_file(&merlon_toml_path)?;
 
-    // Create initial commit
-    let status = Command::new("git")
-        .arg("commit")
-        .arg("-a")
-        .arg("-m").arg("initial commit")
-        .current_dir(&mod_dir)
-        .status()?;
-    if !status.success() {
-        bail!("failed to commit files to git repo");
-    }
+    // Create empty asset directory of the same name as the mod
+    println!("Creating empty asset directory...");
+    fs::create_dir_all(&mod_dir.join("assets").join(&args.name))?;
 
     // Run install script
     if inquire::Confirm::new("Run install.sh?").with_default(true).prompt()? {
