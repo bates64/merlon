@@ -25,7 +25,7 @@ mod build;
 /// License, v. 2.0. If a copy of the MPL was not distributed with this
 /// program, You can obtain one at https://mozilla.org/MPL/2.0/.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about)]
+#[command(name = "Merlon", author, version, about, long_about)]
 struct Args {
     #[clap(subcommand)]
     subcmd: SubCommand,
