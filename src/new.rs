@@ -35,11 +35,7 @@ pub fn run(args: Args) -> Result<()> {
         bail!("failed to initialise git repo");
     }
 
-    // Add papermario submodule
-    // branch: main
-    // commit: 90656fea19ea62412ade3602db78ccdd4d73eb70
-    // url: https://github.com/pmret/papermario.git
-    // path: papermario
+    // Add papermario as a git submodule
     let mut command = Command::new("git");
     command
         .arg("submodule")
@@ -63,7 +59,7 @@ pub fn run(args: Args) -> Result<()> {
 
     // Write .gitignore
     let gitignore_path = mod_dir.join(".gitignore");
-    let gitignore_contents = ".merlon\n";
+    let gitignore_contents = include_str!("../templates/gitignore");
     fs::write(gitignore_path, gitignore_contents)?;
 
     // Write merlon.toml
