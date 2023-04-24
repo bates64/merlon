@@ -10,8 +10,19 @@ mod run;
 /// 
 /// Merlon allows you to create mods that can be applied to the decomp source code, and to package mods
 /// into `.merlon` files that can be applied to a copy of the decomp source code.
+///
+/// For assistance with Merlon, join the #merlon channel of the Paper Mario Modding Discord server:
+///
+/// https://discord.gg/paper-mario-modding-279322074412089344
+/// https://discord.com/channels/279322074412089344/1099844075399696394
+/// 
+/// Copyright 2023 Alex Bates
+///
+/// This Executable Form is subject to the terms of the Mozilla Public
+/// License, v. 2.0. If a copy of the MPL was not distributed with this
+/// program, You can obtain one at https://mozilla.org/MPL/2.0/.
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about)]
 struct Args {
     #[clap(subcommand)]
     subcmd: SubCommand,
