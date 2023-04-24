@@ -1,6 +1,6 @@
 [package]
 name = "merlon"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Alex Bates <alex@nanaian.town>"]
 description = "Paper Mario (N64) decomp mod manager"
