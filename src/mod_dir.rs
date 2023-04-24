@@ -59,6 +59,7 @@ impl TryFrom<PathBuf> for ModDir {
             .arg("status")
             .arg("papermario")
             .current_dir(&path)
+            .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()?;
         if !status.success() {
@@ -72,6 +73,7 @@ impl TryFrom<PathBuf> for ModDir {
             .arg("--cached")
             .arg("papermario")
             .current_dir(&path)
+            .stdout(Stdio::null())
             .status()?;
         if !status.success() {
             eprintln!("warning: papermario submodule in directory {:?} is not up to date", path);
