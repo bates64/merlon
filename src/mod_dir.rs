@@ -88,6 +88,7 @@ impl TryFrom<PathBuf> for ModDir {
     }
 }
 
+// TODO: if submodule, go up
 fn git_root() -> Result<PathBuf> {
     let git_root = Command::new("git")
         .arg("rev-parse")

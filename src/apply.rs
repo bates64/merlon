@@ -6,12 +6,6 @@ use merlon::mod_dir::ModDir;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    /// Mod directory to apply to.
-    ///
-    /// Defaults to the current directory.
-    #[arg(short, long)]
-    mod_dir: Option<PathBuf>,
-
     /// Mod package to apply.
     input: PathBuf,
 }
@@ -67,6 +61,11 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
         }
 
         // Apply patches
+        let mut patch_files = fs::read_dir(&patches_dir)?
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().map(|ext| ext == "patch").unwrap_or(false))
+            .collect::<Vec<_>>();
+        patch_files.sort_unstable();
         let status = Command::new("git")
             .arg("am")
             //.arg("--3way")
@@ -76,9 +75,15 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
             .current_dir(&submodule_dir)
             .status()?;
         if !status.success() {
-            bail!("failed to cleanly apply patches - run `git am --abort` to abort the merge");
+            bail!("failed to cleanly apply patches - run `cd papermario && git am --abort` to abort the merge");
         }
-        println!("Applied patches from {}", &input_name);
+        println!("Applied {} patches from {}:", patch_files.len(), &input_name);
+
+        Command::new("git").arg("log").arg(format!("-{}", patch_files.len()))
+            .arg("--oneline")
+            .current_dir(&submodule_dir)
+            .status()?;
+
         Ok(())
     } else {
         bail!("invalid input filename");
