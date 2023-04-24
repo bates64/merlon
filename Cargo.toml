@@ -13,6 +13,11 @@ chrono = "0.4.24"
 clap = { version = "4.2.4", features = ["derive"] }
 heck = "0.4.1"
 inquire = "0.6.1"
+klask = { git = "https://github.com/xosxos/klask.git", optional = true } # https://github.com/MichalGniadek/klask/issues/50
 serde = { version = "1.0.160", features = ["derive"] }
 shellexpand = "3.1.0"
 toml = "0.7.3"
+
+[features]
+default = ["gui"]
+gui = ["dep:klask"]

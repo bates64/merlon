@@ -11,7 +11,7 @@ pub struct Args {
     /// Mod directory to apply to.
     ///
     /// Defaults to the current directory.
-    #[clap(short, long)]
+    #[arg(short, long)]
     mod_dir: Option<PathBuf>,
 
     /// Mod package to apply.

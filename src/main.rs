@@ -1,5 +1,6 @@
 use clap::Parser;
 use anyhow::Result;
+use std::env;
 
 mod new;
 mod pack;
@@ -53,23 +54,59 @@ enum SubCommand {
     Build(build::Args),
 }
 
+#[cfg(feature = "gui")]
 fn main() -> Result<()> {
+    let is_gui = env::var("TERM").is_err() || matches!(env::var("MERLON_GUI"), Ok(v) if v == "1");
+
+    if is_gui {
+        main_gui()
+    } else {
+        main_cli()
+    }
+}
+
+#[cfg(not(feature = "gui"))]
+fn main() -> Result<()> {
+    main_cli()
+}
+
+fn main_cli() -> Result<()> {
     let args = Args::parse();
-    match args.subcmd {
-        SubCommand::New(new_args) => new::run(new_args),
-        SubCommand::Pack(package_args) => pack::run(package_args),
-        SubCommand::Apply(apply_args) => apply::run(apply_args),
-        SubCommand::Run(run_args) => {
-            let rom_path = build::build_mod(run_args)?;
-            merlon::emulator::run_rom(&rom_path)?;
-            Ok(())
-        },
-        SubCommand::Build(build_args) => {
-            let rom_path = build::build_mod(build_args)?;
-            println!("Output ROM: {}", rom_path.display());
-            println!("You can run this ROM with `merlon run`.");
-            println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
-            Ok(())
-        },
+    args.run()
+}
+
+#[cfg(feature = "gui")]
+fn main_gui() -> Result<()> {
+    use klask::Settings;
+
+    klask::run_derived::<Args, _>(Settings::default(), |args| {
+        if let Err(error) = args.run() {
+            // TODO: better error handling, e.g. nativefiledialog
+            eprintln!("{}", error);
+            std::process::exit(1);
+        }
+    });
+    Ok(())
+}
+
+impl Args {
+    pub fn run(self) -> Result<()> {
+        match self.subcmd {
+            SubCommand::New(new_args) => new::run(new_args),
+            SubCommand::Pack(package_args) => pack::run(package_args),
+            SubCommand::Apply(apply_args) => apply::run(apply_args),
+            SubCommand::Run(run_args) => {
+                let rom_path = build::build_mod(run_args)?;
+                merlon::emulator::run_rom(&rom_path)?;
+                Ok(())
+            },
+            SubCommand::Build(build_args) => {
+                let rom_path = build::build_mod(build_args)?;
+                println!("Output ROM: {}", rom_path.display());
+                println!("You can run this ROM with `merlon run`.");
+                println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
+                Ok(())
+            },
+        }
     }
 }

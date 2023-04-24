@@ -8,15 +8,15 @@ use crate::pack::get_and_check_mod_dir;
 #[derive(Parser, Debug)]
 pub struct Args {
     /// Mod directory.
-    #[clap(short, long)]
+    #[arg(short, long)]
     mod_dir: Option<PathBuf>,
 
     /// Whether to skip configuring (useful if you've already configured).
-    #[clap(long)]
+    #[arg(long)]
     skip_configure: bool,
 
     /// Path to output ROM to.
-    #[clap(short, long)]
+    #[arg(short, long)]
     output: Option<PathBuf>,
 }
 

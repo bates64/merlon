@@ -10,13 +10,13 @@ pub struct Args {
     /// Mod directory.
     ///
     /// Defaults to the current directory.
-    #[clap(short, long)]
+    #[arg(short, long)]
     mod_dir: Option<PathBuf>,
 
     /// The output file to write to.
     ///
     /// If not specified, the default is `MODNAME-YYYY-MM-DD.merlon`, where `MODNAME` is the name of the current directory.
-    #[clap(short, long)]
+    #[arg(short, long)]
     output: Option<PathBuf>,
 }
 
