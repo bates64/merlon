@@ -2,7 +2,7 @@ use std::{path::{Path, PathBuf}, process::{Command, Stdio}};
 use anyhow::{Result, anyhow, bail};
 use heck::AsKebabCase;
 
-use crate::package_config::PackageConfig;
+use crate::package_config::Config;
 
 /// Mod directory.
 #[derive(Debug, Clone)]
@@ -34,8 +34,8 @@ impl ModDir {
         self.path().join("merlon.toml")
     }
 
-    pub fn config(&self) -> Result<PackageConfig> {
-        PackageConfig::read_from_file(&self.config_path())
+    pub fn config(&self) -> Result<Config> {
+        Config::read_from_file(&self.config_path())
     }
 }
 

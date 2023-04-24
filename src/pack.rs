@@ -74,9 +74,18 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
             bail!("failed git format-patch to directory {}", patches_dir.display());
         }
 
-        // TODO: Add a license into the tar, to protect the changes only
-
-        // TODO: add merlon.toml to the tar
+        // Copy metadata/docs files if they exist
+        for file in [
+            "merlon.toml",
+            "README.md", "README.txt", "README",
+            "LICENSE.md", "LICENSE.txt", "LICENSE",
+            "CONTRIBUTING.md", "CONTRIBUTING.txt", "CONTRIBUTING"
+        ].iter() {
+            let path = submodule_dir.join(file);
+            if path.exists() {
+                fs::copy(&path, patches_dir.join(file))?;
+            }
+        }
 
         if patches_dir.read_dir()?.count() == 0 {
             bail!("no patches to package");

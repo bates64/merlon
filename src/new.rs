@@ -3,7 +3,7 @@ use clap::Parser;
 use anyhow::{Result, bail};
 use merlon::baserom::Baserom;
 use merlon::decomp_repo::LocalDecompRepo;
-use merlon::package_config::PackageConfig;
+use merlon::package_config::Config;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -53,27 +53,30 @@ pub fn run(args: Args) -> Result<()> {
     }
 
     // Copy baserom
-    println!("Copying baserom...");
     let baserom_path = baserom.path();
     let baserom_copy_path = mod_dir.join("papermario/ver/us/baserom.z64");
     fs::copy(baserom_path, baserom_copy_path)?;
 
     // Copy template files
     fs::write(mod_dir.join(".gitignore"), include_str!("../templates/gitignore"))?;
+    fs::write(mod_dir.join("LICENSE.txt"), include_str!("../templates/CC-BY-SA-4.0.txt"))?;
     fs::create_dir(mod_dir.join(".vscode"))?;
     fs::write(mod_dir.join(".vscode/c_cpp_properties.json"), include_str!("../templates/.vscode/c_cpp_properties.json"))?;
     fs::write(mod_dir.join(".vscode/extensions.json"), include_str!("../templates/.vscode/extensions.json"))?;
     fs::write(mod_dir.join(".vscode/settings.json"), include_str!("../templates/.vscode/settings.json"))?;
     fs::write(mod_dir.join(".vscode/tasks.json"), include_str!("../templates/.vscode/tasks.json"))?;
 
+    // Write readme
+    let readme = include_str!("../templates/README.md")
+        .replace("{{mod_name}}", &args.name);
+    fs::write(mod_dir.join("README.md"), readme)?;
+
     // Write merlon.toml
-    println!("Creating merlon.toml...");
     let merlon_toml_path = mod_dir.join("merlon.toml");
-    PackageConfig::default_for_mod(&mod_dir)?.write_to_file(&merlon_toml_path)?;
+    Config::default_for_mod(&mod_dir)?.write_to_file(&merlon_toml_path)?;
 
     // Create empty asset directory of the same name as the mod
-    println!("Creating empty asset directory...");
-    fs::create_dir_all(&mod_dir.join("assets").join(&args.name))?;
+    fs::create_dir_all(&mod_dir.join("papermario/assets").join(&args.name))?;
 
     // Run install script
     if inquire::Confirm::new("Run install.sh?").with_default(true).prompt()? {
