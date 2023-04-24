@@ -68,21 +68,13 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
         patch_files.sort_unstable();
         let status = Command::new("git")
             .arg("am")
-            //.arg("--3way")
-            //.arg("--ignore-whitespace")
-            //.arg("--whitespace=nowarn")
-            .arg(&patches_dir)
+            .arg("--3way")
+            .args(patch_files.iter().map(|path| path.to_string_lossy().to_string()))
             .current_dir(&submodule_dir)
             .status()?;
         if !status.success() {
             bail!("failed to cleanly apply patches - run `cd papermario && git am --abort` to abort the merge");
         }
-        println!("Applied {} patches from {}:", patch_files.len(), &input_name);
-
-        Command::new("git").arg("log").arg(format!("-{}", patch_files.len()))
-            .arg("--oneline")
-            .current_dir(&submodule_dir)
-            .status()?;
 
         Ok(())
     } else {
