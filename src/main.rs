@@ -4,6 +4,7 @@ use anyhow::Result;
 mod new;
 mod pack;
 mod apply;
+mod run;
 
 /// Mod manager for the Paper Mario (N64) decompilation.
 /// 
@@ -33,6 +34,9 @@ enum SubCommand {
 
     /// Apply a mod package.
     Apply(apply::Args),
+
+    /// Run a mod in an emulator.
+    Run(run::Args),
 }
 
 fn main() -> Result<()> {
@@ -41,5 +45,6 @@ fn main() -> Result<()> {
         SubCommand::New(new_args) => new::run(new_args),
         SubCommand::Pack(package_args) => pack::run(package_args),
         SubCommand::Apply(apply_args) => apply::run(apply_args),
+        SubCommand::Run(run_args) => run::run(run_args),
     }
 }

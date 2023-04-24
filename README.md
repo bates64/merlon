@@ -10,6 +10,7 @@ Features:
 - [x] Create mods (`merlon new`)
 - [x] Package mods (`merlon pack`)
 - [x] Apply mods (`merlon apply`)
+- [x] Compile and run the game with mods applied (`merlon run`)
 - [x] View mod source code
 - [x] Merge mods together to create modpacks
 - [ ] Shortcut to apply mods and compile
