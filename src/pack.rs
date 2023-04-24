@@ -84,6 +84,7 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
 
         // Compress patch directory into a tar
         let status = Command::new("tar")
+            .arg("--no-xattrs") // Avoid com.apple.provenance
             .arg("-cjvf")
             .arg(&tar_path)
             .arg("-C").arg(&output_dir)
