@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "gui", windows_subsystem = "windows")]
+
 use clap::Parser;
 use anyhow::Result;
 use std::env;
@@ -56,6 +58,7 @@ enum SubCommand {
 
 #[cfg(feature = "gui")]
 fn main() -> Result<()> {
+    // If TERM is not set, or MERLON_GUI=1, run the GUI.
     let is_gui = env::var("TERM").is_err() || matches!(env::var("MERLON_GUI"), Ok(v) if v == "1");
 
     if is_gui {
