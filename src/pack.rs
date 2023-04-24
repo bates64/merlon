@@ -71,6 +71,8 @@ pub fn run(args: Args) -> Result<()> {
             .arg("--")
             .arg("src")
             .arg("include")
+            .arg("assets") // Original assets should be gitignored
+            .arg("ver/us")
             .current_dir(&submodule_dir)
             .status()?;
         if !status.success() {
