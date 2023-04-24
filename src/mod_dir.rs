@@ -24,12 +24,6 @@ impl ModDir {
         self.path().join("papermario")
     }
 
-    pub fn kebab_case_name(&self) -> Result<String> {
-        let name = self.path().file_name().ok_or_else(|| anyhow!("mod directory has no name"))?;
-        let name = name.to_string_lossy();
-        Ok(format!("{}", AsKebabCase(name)))
-    }
-
     pub fn config_path(&self) -> PathBuf {
         self.path().join("merlon.toml")
     }

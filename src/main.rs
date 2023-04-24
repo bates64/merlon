@@ -115,6 +115,11 @@ impl Args {
             ModDir::current().ok()
         };
 
+        if let Some(mod_dir) = &mut mod_dir {
+            // TODO: make sure the submodule is up to date.
+            mod_dir.config()?.package.print_validation_warnings();
+        }
+
         // Run subcommand.
         match self.subcmd {
             SubCommand::New(new_args) => {

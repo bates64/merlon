@@ -8,22 +8,20 @@ use merlon::mod_dir::ModDir;
 pub struct Args {
     /// The output file to write to.
     ///
-    /// If not specified, the default is `MODNAME-YYYY-MM-DD.merlon`, where `MODNAME` is the name of the current directory.
+    /// If not specified, the default is `NAME.merlon`, where `NAME` is the name of the mod package.
     #[arg(short, long)]
     output: Option<PathBuf>,
 }
 
 pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
-    let package_name = mod_dir.kebab_case_name()?;
-    let submodule_dir = mod_dir.submodule_dir();
     let config = mod_dir.config()?;
+    let submodule_dir = mod_dir.submodule_dir();
 
     let output_name = args.output
         .as_ref()
         .map(|path| path.file_stem().map(|stem| stem.to_string_lossy().to_string()))
         .unwrap_or_else(|| {
-            let date = chrono::Local::now().format("%Y-%m-%d");
-            Some(format!("{package_name}-{date}"))
+            Some(config.package.name().to_owned())
         });
 
     if let Some(output_name) = output_name {
@@ -88,7 +86,7 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
         }
 
         if patches_dir.read_dir()?.count() == 0 {
-            bail!("no patches to package");
+            bail!("no commits in papermario submodule - did you forget to `git commit` inside?");
         }
 
         // Compress patch directory into a tar
@@ -100,7 +98,7 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
             .arg("patches")
             .status()?;
         if !status.success() {
-            bail!("failed to compress patches to tar {}", tar_path.display());
+            bail!("failed to compress to tar {}", tar_path.display());
         }
 
         // List the tar
@@ -127,7 +125,7 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
 
         // Copy to output path
         fs::copy(&encrypted_path, &output_path)?;
-        println!("Wrote package to {}", output_path.display());
+        println!("Wrote distributable to {}", output_path.display());
         Ok(())
     } else {
         bail!("output filename cannot be empty");

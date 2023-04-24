@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::prelude::*;
 use std::{fs::File, path::Path, io::{BufReader, BufWriter}};
 use anyhow::Result;
-
+use heck::AsKebabCase;
 use serde::{Deserialize, Serialize};
 
 // TODO: use taplo instead of toml to preserve comments etc
@@ -21,12 +21,66 @@ pub struct Config {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Package {
-    pub name: String,
-    pub version: String,
-    pub authors: Vec<String>,
-    pub description: String,
-    pub license: String,
-    pub keywords: Vec<String>,
+    name: String,
+    version: String,
+    authors: Vec<String>,
+    description: String,
+    license: String,
+    keywords: Vec<String>,
+}
+
+impl Package {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Validate package metadata, returning a list of errors
+    pub fn validate(&self) -> Vec<String> {
+        let mut errors = Vec::new();
+        if self.name.is_empty() {
+            errors.push("name cannot be empty".to_owned());
+        }
+        if format!("{}", AsKebabCase(&self.name)) != self.name {
+            errors.push("name must be kebab-case".to_owned());
+        }
+        if self.name.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-') {
+            errors.push("name must be alphanumeric".to_owned());
+        }
+        if self.version.is_empty() {
+            errors.push("version cannot be empty".to_owned());
+        }
+        // TODO: validate version
+        if self.authors.is_empty() {
+            errors.push("authors cannot be empty".to_owned());
+        }
+        if self.description.is_empty() {
+            errors.push("description cannot be empty".to_owned());
+        }
+        if self.description.len() > 100 {
+            errors.push("description must be less than 100 characters".to_owned());
+        }
+        if self.license.is_empty() {
+            errors.push("license cannot be empty".to_owned());
+        }
+        // TODO: validate license
+        for keyword in &self.keywords {
+            const VALID_KEYWORDS: &[&str] = &["qol", "cheat", "bugfix", "cosmetic", "feature"];
+            if !VALID_KEYWORDS.contains(&keyword.as_str()) {
+                errors.push(format!("invalid keyword: {} (valid keywords: {:?})", keyword, VALID_KEYWORDS));
+            }
+        }
+        errors
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.validate().is_empty()
+    }
+
+    pub fn print_validation_warnings(&self) {
+        for error in self.validate() {
+            eprintln!("warning: {}", error);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
