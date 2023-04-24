@@ -47,20 +47,20 @@ enum SubCommand {
     /// The repository will have a `papermario` submodule, which will be set to the latest commit on the `main` branch.
     New(new::Args),
 
-    /// Package a mod for distribution.
+    /// Package current mod for distribution.
     ///
     /// Mods are distributed as `.merlon` files, which are encrypted, compressed tarballs of git patches.
     /// Merlon files are encrypted using the base ROM as the key.
     /// The patches are applied to the `papermario` submodule in the mod's directory.
     Pack(pack::Args),
 
-    /// Apply a mod package to another mod.
+    /// Apply a mod package to the current mod.
     Apply(apply::Args),
 
-    /// Run a mod in an emulator.
+    /// Run current mod in an emulator.
     Run(build::Args),
 
-    /// Build a mod into a ROM.
+    /// Build current mod into a ROM.
     Build(build::Args),
 
     /// Launch the GUI.
@@ -117,7 +117,13 @@ impl Args {
 
         // Run subcommand.
         match self.subcmd {
-            SubCommand::New(new_args) => new::run(new_args),
+            SubCommand::New(new_args) => {
+                if let Some(mod_dir) = &mut mod_dir {
+                    bail!("cannot create new mod: already in a mod directory: {}", mod_dir.path().display());
+                } else {
+                    new::run(new_args)
+                }
+            },
             SubCommand::Pack(package_args) => {
                 if let Some(mod_dir) = &mut mod_dir {
                     pack::run(mod_dir, package_args)

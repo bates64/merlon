@@ -88,14 +88,34 @@ impl TryFrom<PathBuf> for ModDir {
     }
 }
 
-// TODO: if submodule, go up
+/// Finds the mod's git root, starting from the current directory.
+/// If within a submodule, returns the root of the parent repo.
+/// Otherwise, returns the root of the current repo.
+/// If not in a repo at all, returns an error.
 fn git_root() -> Result<PathBuf> {
+    // If we're in a submodule, --show-superproject-working-tree will give us the parent repo
+    let git_root = Command::new("git")
+        .arg("rev-parse")
+        .arg("--show-superproject-working-tree")
+        .output()?
+        .stdout;
+    let git_root = String::from_utf8(git_root)?;
+    if !git_root.is_empty() {
+        let git_root = Path::new(git_root.trim()).canonicalize()?;
+        return Ok(git_root);
+    }
+
+    // If it returned nothing, we're not in a submodule, so we can just use --show-toplevel
     let git_root = Command::new("git")
         .arg("rev-parse")
         .arg("--show-toplevel")
         .output()?
         .stdout;
     let git_root = String::from_utf8(git_root)?;
-    let git_root = Path::new(git_root.trim()).canonicalize()?;
-    Ok(git_root)
+    if !git_root.is_empty() {
+        let git_root = Path::new(git_root.trim()).canonicalize()?;
+        return Ok(git_root);
+    }
+
+    bail!("not in a git repository");
 }
