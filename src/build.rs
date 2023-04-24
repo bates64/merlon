@@ -6,10 +6,6 @@ use merlon::mod_dir::ModDir;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    /// Mod directory.
-    #[arg(short, long)]
-    mod_dir: Option<PathBuf>,
-
     /// Whether to skip configuring (useful if you've already configured).
     #[arg(long)]
     skip_configure: bool,
