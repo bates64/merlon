@@ -14,6 +14,10 @@ pub struct Args {
     /// Whether to skip configuring (useful if you've already configured).
     #[clap(long)]
     skip_configure: bool,
+
+    /// Path to output ROM to.
+    #[clap(short, long)]
+    output: Option<PathBuf>,
 }
 
 pub fn build_mod(args: Args) -> Result<PathBuf> {
@@ -42,5 +46,13 @@ pub fn build_mod(args: Args) -> Result<PathBuf> {
     if !status.success() {
         bail!("failed to build");
     }
-    Ok(submodule_dir.join("ver/us/build/papermario.z64"))
+
+    // Copy output file if needed
+    let rom = submodule_dir.join("ver/us/build/papermario.z64");
+    if let Some(output) = args.output {
+        std::fs::copy(rom, &output)?;
+        Ok(output.into())
+    } else {
+        Ok(rom)
+    }
 }
