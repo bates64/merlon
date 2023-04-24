@@ -81,8 +81,25 @@ pub fn run(args: Args) -> Result<()> {
         bail!("failed to commit files to git repo");
     }
 
-    // Done
-    println!("Created mod directory {:?}", mod_dir);
+    // Run install script
+    if inquire::Confirm::new("Run install.sh?").with_default(true).prompt()? {
+        let status = Command::new("./install.sh")
+            .current_dir(&mod_dir.join("papermario"))
+            .status()?;
+        if !status.success() {
+            eprintln!("install.sh failed, you may need to run it manually.");
+            eprintln!("If you see an error like 'Sorry, this is not a GIT repository', you can ignore it.");
+        }
+    }
+
+    // Done!
+    println!("");
+    println!("Created mod: {:?}", mod_dir.file_stem().unwrap_or_default());
+    println!("To build and run this mod, run the following commands:");
+    println!("");
+    println!("    cd {:?}", mod_dir);
+    println!("    merlon run");
+    println!("");
 
     Ok(())
 }
