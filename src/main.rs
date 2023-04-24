@@ -71,7 +71,7 @@ enum SubCommand {
 #[cfg(feature = "gui")]
 fn main() -> Result<()> {
     // If TERM is not set, or MERLON_GUI=1, run the GUI.
-    let is_gui = env::var("TERM").is_err() || matches!(env::var("MERLON_GUI"), Ok(v) if v == "1");
+    let is_gui = std::env::var("TERM").is_err() || matches!(std::env::var("MERLON_GUI"), Ok(v) if v == "1");
 
     if is_gui {
         main_gui()
