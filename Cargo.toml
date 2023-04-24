@@ -3,7 +3,7 @@ name = "merlon"
 version = "0.1.0"
 edition = "2021"
 authors = ["Alex Bates <alex@nanaian.town>"]
-description = "General-purpose Paper Mario (N64) modding tool"
+description = "Paper Mario (N64) decomp mod manager"
 license = "MPL-2.0"
 repository = "https://github.com/nanaian/merlon"
 
