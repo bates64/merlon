@@ -2,9 +2,7 @@ use std::path::{PathBuf};
 use std::{fs, process::Command};
 use clap::Parser;
 use anyhow::{Result, bail};
-use merlon::package_config::PackageConfig;
-
-use crate::pack::get_and_check_mod_dir;
+use merlon::mod_dir::ModDir;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -18,10 +16,8 @@ pub struct Args {
     input: PathBuf,
 }
 
-pub fn run(args: Args) -> Result<()> {
-    let mod_dir = get_and_check_mod_dir(args.mod_dir)?;
-    let submodule_dir = mod_dir.join("papermario");
-    let _config = PackageConfig::read_from_file(&mod_dir.join("merlon.toml"))?;
+pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
+    let submodule_dir = mod_dir.submodule_dir();
 
     // 1. Decrypt
     // 2. Extract
@@ -30,7 +26,7 @@ pub fn run(args: Args) -> Result<()> {
     let input_name = args.input.file_stem().map(|stem| stem.to_string_lossy().to_string());
     if let Some(input_name) = input_name {
         // Output paths
-        let output_dir = mod_dir.join(".merlon").join("packages").join(&input_name);
+        let output_dir = mod_dir.path().join(".merlon").join("packages").join(&input_name);
         let patches_dir = output_dir.join("patches");
         let tar_path = output_dir.join("patches.tar.bz2");
         let encrypted_path = args.input;

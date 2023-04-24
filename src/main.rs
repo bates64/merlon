@@ -1,8 +1,9 @@
 #![cfg_attr(feature = "gui", windows_subsystem = "windows")]
 
 use clap::Parser;
-use anyhow::Result;
-use std::env;
+use anyhow::{Result, bail};
+use merlon::mod_dir::ModDir;
+use std::{env, path::PathBuf};
 
 mod new;
 mod pack;
@@ -29,6 +30,13 @@ mod build;
 struct Args {
     #[clap(subcommand)]
     subcmd: SubCommand,
+
+    /// The directory of the mod to operate on.
+    /// 
+    /// Defaults the current git repository directory, or the current directory if not in a git repository.
+    /// Merlon mod directories can be identified by the presence of a `merlon.toml` file.
+    #[arg(short, long)]
+    directory: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug)]
@@ -94,21 +102,51 @@ fn main_gui() -> Result<()> {
 
 impl Args {
     pub fn run(self) -> Result<()> {
+        // Get mod directory from args, or current directory if not specified.
+        let mut mod_dir = if let Some(directory) = self.directory {
+            // If a directory is provided and its invalid, error.
+            Some(ModDir::try_from(directory)?)
+        } else {
+            // Otherwise, try to find the current mod directory, but it's OK if its None.
+            ModDir::current().ok()
+        };
+
+        // Run subcommand.
         match self.subcmd {
             SubCommand::New(new_args) => new::run(new_args),
-            SubCommand::Pack(package_args) => pack::run(package_args),
-            SubCommand::Apply(apply_args) => apply::run(apply_args),
+            SubCommand::Pack(package_args) => {
+                if let Some(mod_dir) = &mut mod_dir {
+                    pack::run(mod_dir, package_args)
+                } else {
+                    bail!("cannot package mod: not in a mod directory.");
+                }
+            },
+            SubCommand::Apply(apply_args) => {
+                if let Some(mod_dir) = &mut mod_dir {
+                    apply::run(mod_dir, apply_args)
+                } else {
+                    bail!("cannot apply mod: not in a mod directory.");
+                }
+            },
             SubCommand::Run(run_args) => {
-                let rom_path = build::build_mod(run_args)?;
-                merlon::emulator::run_rom(&rom_path)?;
-                Ok(())
+                if let Some(mod_dir) = &mut mod_dir {
+                    let rom_path = build::build_mod(mod_dir, run_args)?;
+                    merlon::emulator::run_rom(&rom_path)?;
+                    Ok(())
+                } else {
+                    bail!("cannot run mod: not in a mod directory.");
+                }
             },
             SubCommand::Build(build_args) => {
-                let rom_path = build::build_mod(build_args)?;
-                println!("Output ROM: {}", rom_path.display());
-                println!("You can run this ROM with `merlon run`.");
-                println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
-                Ok(())
+                if let Some(mod_dir) = &mut mod_dir {
+                    let rom_path = build::build_mod(mod_dir, build_args)?;
+                    println!("Output ROM: {}", rom_path.display());
+                    println!("You can run this ROM with `merlon run`.");
+                    println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
+                    Ok(())
+                } else {
+                    bail!("cannot build mod: not in a mod directory.");
+                }
             },
         }
     }

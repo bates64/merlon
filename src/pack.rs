@@ -1,18 +1,11 @@
-use std::path::{PathBuf, Path};
+use std::path::PathBuf;
 use std::{fs, process::Command};
 use clap::Parser;
-use anyhow::{Result, anyhow, bail};
-use heck::AsKebabCase;
-use merlon::package_config::PackageConfig;
+use anyhow::{Result, bail};
+use merlon::mod_dir::ModDir;
 
 #[derive(Parser, Debug)]
 pub struct Args {
-    /// Mod directory.
-    ///
-    /// Defaults to the current directory.
-    #[arg(short, long)]
-    mod_dir: Option<PathBuf>,
-
     /// The output file to write to.
     ///
     /// If not specified, the default is `MODNAME-YYYY-MM-DD.merlon`, where `MODNAME` is the name of the current directory.
@@ -20,11 +13,10 @@ pub struct Args {
     output: Option<PathBuf>,
 }
 
-pub fn run(args: Args) -> Result<()> {
-    let mod_dir = get_and_check_mod_dir(args.mod_dir)?;
-    let package_name = get_mod_package_name(&mod_dir)?;
-    let submodule_dir = mod_dir.join("papermario");
-    let config = PackageConfig::read_from_file(&mod_dir.join("merlon.toml"))?;
+pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
+    let package_name = mod_dir.kebab_case_name()?;
+    let submodule_dir = mod_dir.submodule_dir();
+    let config = mod_dir.config()?;
 
     let output_name = args.output
         .as_ref()
@@ -50,7 +42,7 @@ pub fn run(args: Args) -> Result<()> {
         }
 
         // Output paths
-        let output_dir = mod_dir.join(".merlon").join("packages").join(output_name);
+        let output_dir = mod_dir.path().join(".merlon").join("packages").join(output_name);
         let patches_dir = output_dir.join("patches");
         let tar_path = output_dir.join("patches.tar.bz2");
         let encrypted_path = output_dir.join("patches.enc");
@@ -80,6 +72,8 @@ pub fn run(args: Args) -> Result<()> {
         }
 
         // TODO: Add a license into the tar, to protect the changes only
+
+        // TODO: add merlon.toml to the tar
 
         // Compress patch directory into a tar
         let status = Command::new("tar")
@@ -114,50 +108,4 @@ pub fn run(args: Args) -> Result<()> {
     } else {
         bail!("output filename cannot be empty");
     }
-}
-
-/// Checks a mod directory is valid. If `mod_dir` is `None`, the current directory is used.
-pub fn get_and_check_mod_dir(mod_dir: Option<PathBuf>) -> Result<PathBuf> {
-    // TODO: use `git rev-parse --show-toplevel` to get the root of the git repo
-    let mod_dir = mod_dir.map(|p| Ok(p)).unwrap_or_else(|| std::env::current_dir())?;
-
-    // Check directory is a git repo
-    let status = Command::new("git")
-        .arg("rev-parse")
-        .current_dir(&mod_dir)
-        .status()?;
-    if !status.success() {
-        bail!("directory {:?} is not a git repository", mod_dir);
-    }
-
-    // Check directory has papermario submodule
-    let status = Command::new("git")
-        .arg("submodule")
-        .arg("status")
-        .arg("papermario")
-        .current_dir(&mod_dir)
-        .status()?;
-    if !status.success() {
-        bail!("directory {:?} does not have a papermario submodule", mod_dir);
-    }
-
-    // Check papermario submodule is up to date
-    let status = Command::new("git")
-        .arg("submodule")
-        .arg("status")
-        .arg("--cached")
-        .arg("papermario")
-        .current_dir(&mod_dir)
-        .status()?;
-    if !status.success() {
-        eprintln!("warning: papermario submodule in directory {:?} is not up to date", mod_dir);
-    }
-
-    Ok(mod_dir)
-}
-
-pub fn get_mod_package_name(mod_dir: &Path) -> Result<String> {
-    let name = mod_dir.file_name().ok_or_else(|| anyhow!("mod directory has no name"))?;
-    let name = name.to_string_lossy();
-    Ok(format!("{}", AsKebabCase(name)))
 }

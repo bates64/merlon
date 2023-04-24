@@ -2,8 +2,7 @@ use std::path::PathBuf;
 use std::process::Command;
 use clap::Parser;
 use anyhow::{Result, bail};
-
-use crate::pack::get_and_check_mod_dir;
+use merlon::mod_dir::ModDir;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -20,9 +19,8 @@ pub struct Args {
     output: Option<PathBuf>,
 }
 
-pub fn build_mod(args: Args) -> Result<PathBuf> {
-    let mod_dir = get_and_check_mod_dir(args.mod_dir)?;
-    let submodule_dir = mod_dir.join("papermario");
+pub fn build_mod(mod_dir: &mut ModDir, args: Args) -> Result<PathBuf> {
+    let submodule_dir = mod_dir.submodule_dir();
 
     // Configure
     // TODO: only do this if we have to (i.e. file tree changed) - maybe ask git?
