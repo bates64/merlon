@@ -49,11 +49,18 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
             bail!("failed to decrypt {}", encrypted_path.display());
         }
 
-        // Decompress tar into patch directory into a tar
-        let status = Command::new("tar")
-            .arg("-cjvf")
+        // List the tar
+        Command::new("tar")
+            .arg("-tvf")
             .arg(&tar_path)
-            .arg(&patches_dir)
+            .status()?;
+
+        // Decompress tar into patch directory
+        let status = Command::new("tar")
+            .arg("-xjvf")
+            .arg(&tar_path)
+            .arg("-C").arg(&output_dir)
+            .arg("patches")
             .status()?;
         if !status.success() {
             bail!("failed to decompress {}", tar_path.display());

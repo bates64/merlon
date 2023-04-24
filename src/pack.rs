@@ -75,15 +75,26 @@ pub fn run(mod_dir: &mut ModDir, args: Args) -> Result<()> {
 
         // TODO: add merlon.toml to the tar
 
+        if patches_dir.read_dir()?.count() == 0 {
+            bail!("no patches to package");
+        }
+
         // Compress patch directory into a tar
         let status = Command::new("tar")
             .arg("-cjvf")
             .arg(&tar_path)
-            .arg(&patches_dir)
+            .arg("-C").arg(&output_dir)
+            .arg("patches")
             .status()?;
         if !status.success() {
             bail!("failed to compress patches to tar {}", tar_path.display());
         }
+
+        // List the tar
+        Command::new("tar")
+            .arg("-tvf")
+            .arg(&tar_path)
+            .status()?;
 
         // Encrypt the tar using baserom as hash
         let status = Command::new("openssl")
