@@ -3,7 +3,7 @@
 use clap::Parser;
 use anyhow::{Result, bail};
 use merlon::mod_dir::ModDir;
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 
 mod new;
 mod pack;
