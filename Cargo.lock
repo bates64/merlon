@@ -1178,7 +1178,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 [[package]]
 name = "klask"
 version = "1.0.0"
-source = "git+https://github.com/xosxos/klask.git#27d4c0b5493423724ffa5793e183f7333089f6eb"
+source = "git+https://github.com/xosxos/klask.git?rev=27d4c0b5493423724ffa5793e183f7333089f6eb#27d4c0b5493423724ffa5793e183f7333089f6eb"
 dependencies = [
  "cansi",
  "clap",
