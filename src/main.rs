@@ -62,6 +62,10 @@ enum SubCommand {
 
     /// Build a mod into a ROM.
     Build(build::Args),
+
+    /// Launch the GUI.
+    #[cfg(feature = "gui")]
+    Gui,
 }
 
 #[cfg(feature = "gui")]
@@ -148,6 +152,8 @@ impl Args {
                     bail!("cannot build mod: not in a mod directory.");
                 }
             },
+            #[cfg(feature = "gui")]
+            SubCommand::Gui => main_gui(),
         }
     }
 }
