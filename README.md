@@ -19,6 +19,8 @@ Features:
 
 ## Quickstart
 
+> **Note:** If you use Windows, you will need to use WSL 2. See the [decomp installation instructions](https://github.com/pmret/papermario/blob/main/INSTALL.md#wsl-2) for more information.
+
 1.  [Install Rust](https://rustup.rs/)
 2. `cargo install merlon`
 3. `merlon new my-mod`
