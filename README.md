@@ -16,6 +16,16 @@ Features:
 - [ ] Shortcut to apply mods and compile
 - [ ] Shortcut to combine mods together to create modpacks
 
+## Supported platforms
+
+Merlon supports all platforms that the Paper Mario decompilation supports.
+
+- Linux
+- macOS
+- Windows (using Windows Subsystem for Linux 2)
+
+See the [decomp installation instructions](https://github.com/pmret/papermario/blob/main/INSTALL.md) for more information.
+
 ## Installation
 
 See [releases](https://github.com/nanaian/merlon/releases) for pre-built binaries.
@@ -39,6 +49,14 @@ cargo install --path .
 ## Usage
 
 Merlon is a command-line tool. Use `merlon help` to see a list of commands.
+
+```
+cargo install merlon
+merlon new my-mod
+cd my-mod
+# make changes to my-mod/papermario as usual
+merlon run
+```
 
 ## Mod file format
 
