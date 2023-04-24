@@ -42,6 +42,15 @@ Merlon supports all platforms that the Paper Mario decompilation supports.
 
 See the [decomp installation instructions](https://github.com/pmret/papermario/blob/main/INSTALL.md) for more information.
 
+Additionally, Merlon has a number of runtime dependencies that should be available on your PATH:
+
+- `git`
+- `ninja`
+- `python3`
+- `tar`
+- `bzip2`
+- `openssl`
+
 ## Installation
 
 See [releases](https://github.com/nanaian/merlon/releases) for pre-built binaries.
