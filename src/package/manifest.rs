@@ -212,20 +212,18 @@ impl Manifest {
     pub fn has_direct_decomp_dependency(&self) -> bool {
         self.dependencies.iter().any(|dep| matches!(dep, Dependency::Decomp { .. }))
     }
-}
 
-/// Get base commit of git submodule
-fn get_base_commit(mod_path: &Path) -> Result<String> {
-    let submodule_path = mod_path.join("papermario");
-    let base_commit = std::process::Command::new("git")
-        .arg("rev-parse")
-        .arg("HEAD")
-        .current_dir(&submodule_path)
-        .output()?
-        .stdout;
-    let base_commit = String::from_utf8(base_commit)?;
-    let base_commit = base_commit.trim().to_owned();
-    Ok(base_commit)
+    /// Adds a Dependency::Decomp dependency if one does not already exist.
+    /// If it does exist, updates it.
+    pub fn upsert_decomp_dependency(&mut self, rev: String) -> Result<()> {
+        if let Some(dep) = self.dependencies.iter_mut().find(|dep| matches!(dep, Dependency::Decomp { .. })) {
+            if let Dependency::Decomp { rev: existing_rev } = dep {
+                *existing_rev = rev;
+                return Ok(());
+            }
+        }
+        self.declare_direct_dependency(Dependency::Decomp { rev })
+    }
 }
 
 /// Get author from git config as `name <email>`

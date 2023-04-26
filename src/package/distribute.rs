@@ -288,6 +288,7 @@ impl Distributable {
             };
             let initialised = package.to_initialised(InitialiseOptions {
                 baserom: options.baserom,
+                rev: None,
             })?;
             initialised.build_rom(BuildRomOptions {
                 output: Some(output_path),

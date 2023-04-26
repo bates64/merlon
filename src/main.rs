@@ -58,6 +58,9 @@ enum SubCommand {
     /// Build current mod into a ROM.
     Build(merlon::package::init::BuildRomOptions),
 
+    /// Update all dependencies, including packages and the decomp.
+    Update,
+
     /// Launch the GUI.
     #[cfg(feature = "gui")]
     Gui,
@@ -195,9 +198,19 @@ impl Args {
                     println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
                     Ok(())
                 } else {
-                    bail!("cannot build package: not in a mod directory.");
+                    bail!("cannot build package: not in a package directory.");
                 }
             },
+            SubCommand::Update => {
+                if let Some(package) = package {
+                    let initialised: InitialisedPackage = package.try_into()?;
+                    initialised.update_decomp()?;
+                    initialised.sync_with_repo()?;
+                    Ok(())
+                } else {
+                    bail!("cannot update package: not in a package directory.");
+                }
+            }
             #[cfg(feature = "gui")]
             SubCommand::Gui => main_gui(),
         }

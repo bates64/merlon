@@ -49,6 +49,12 @@ pub struct InitialiseOptions {
     /// Path to an unmodified US-release Paper Mario (N64) ROM.
     #[arg(long)]
     pub baserom: PathBuf,
+
+    /// Git revision of decomp to use.
+    /// 
+    /// If not provided, the latest commit on `main` is used.
+    #[arg(long)]
+    pub rev: Option<String>,   
 }
 
 #[derive(Parser, Debug)]
@@ -139,7 +145,17 @@ impl InitialisedPackage {
                 bail!("failed to clone decomp repository");
             }
 
-            // TODO: declare dependency on papermario
+            if let Some(rev) = options.rev {
+                // Checkout revision
+                let status = Command::new("git")
+                    .arg("checkout")
+                    .arg(&rev)
+                    .current_dir(package.path().join(SUBREPO_DIR_NAME))
+                    .status()?;
+                if !status.success() {
+                    bail!("failed to checkout revision");
+                }
+            }
 
             // Create assets dir for this mod
             create_dir_all(package.path().join(SUBREPO_DIR_NAME).join("assets").join(&package_id_string))
@@ -189,6 +205,7 @@ impl InitialisedPackage {
 
             let package_id_string = package.id()?.to_string();
             let initialised = Self::from_initialised(package)?;
+            initialised.update_decomp()?;
             initialised.git_create_branch(&package_id_string)?;
             initialised.git_checkout_branch(&package_id_string)?;
             initialised.sync_with_repo()?;
@@ -380,6 +397,68 @@ impl InitialisedPackage {
             bail!("failed to run git stash pop");
         }
         Ok(())
+    }
+
+    /// Stashes if needed, switches to the main branch, pulls, then switches back, merges, and pops stash.
+    /// Also updates the decomp dependency in the package manifest to the main's HEAD commit.
+    pub fn update_decomp(&self) -> Result<()> {
+        let main_branch = "main";
+        let prev_branch = self.git_current_branch()?;
+
+        // Stash if needed
+        if self.git_is_dirty()? {
+            self.git_stash()?;
+            defer!(warn_if_err(self.git_stash_pop()));
+        }
+
+        // Switch to main branch
+        if prev_branch != main_branch {
+            self.git_checkout_branch(main_branch)?;
+        }
+
+        // Pull
+        let status = Command::new("git")
+            .arg("pull")
+            .current_dir(self.subrepo_path())
+            .status()?;
+        if !status.success() {
+            bail!("failed to run git pull");
+        }
+
+        // Switch back to package branch
+        if prev_branch != main_branch {
+            self.git_checkout_branch(&prev_branch)?;
+
+            // Merge main into package branch
+            let status = Command::new("git")
+                .arg("merge")
+                .arg(main_branch)
+                .current_dir(self.subrepo_path())
+                .status()?;
+            if !status.success() {
+                bail!("failed to run git merge");
+            }
+        }
+
+        // Update decomp dependency in manifest
+        let main_head = self.git_head_commit()?;
+        self.package().edit_manifest(|manifest| {
+            manifest.upsert_decomp_dependency(main_head)
+        })
+    }
+
+    fn git_head_commit(&self) -> Result<String> {
+        let output = Command::new("git")
+            .arg("rev-parse")
+            .arg("HEAD")
+            .current_dir(self.subrepo_path())
+            .output()?;
+        if !output.status.success() {
+            bail!("failed to run git rev-parse");
+        }
+        String::from_utf8(output.stdout)
+            .map(|s| s.trim().to_string())
+            .map_err(Into::into)
     }
 }
 

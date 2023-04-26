@@ -1,0 +1,12 @@
+[package]
+id = "ea9e5e4b-958e-4b3c-bfdc-571c39595acf"
+name = "test"
+version = "0.1.0"
+authors = ["Alex Bates <alex@nanaian.town>"]
+description = "An amazing mod"
+license = "CC-BY-SA-4.0"
+keywords = []
+
+[[dependencies]]
+type = "decomp"
+rev = "7a9df943ad079e7b19df0f8690bdc92e2beed964"

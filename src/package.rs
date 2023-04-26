@@ -17,7 +17,7 @@ use std::{
 };
 use anyhow::{Result, bail};
 
-mod manifest;
+pub mod manifest;
 pub use manifest::{
     Manifest,
     Id,
