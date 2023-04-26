@@ -1,3 +1,4 @@
 /target
 /examples/*
 !/examples/*.merlon
+*.z64

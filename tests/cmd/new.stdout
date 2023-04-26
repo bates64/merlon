@@ -1,0 +1,8 @@
+
+Created package: Test mod by [..]
+To build and run this package, run the following commands:
+
+    cd "test-mod"
+    merlon init
+    merlon run
+

@@ -22,6 +22,7 @@ use anyhow::{Result, bail, Context};
 use temp_dir::TempDir;
 
 use crate::package::InitialisedPackage;
+use crate::rom::Rom;
 
 use super::init::{InitialiseOptions, BuildRomOptions};
 use super::{
@@ -274,8 +275,8 @@ impl Distributable {
         &self.path
     }
 
-    /// Applies the distributable to a base ROM, and returns the path to the output ROM.
-    pub fn apply(&self, options: ApplyOptions) -> Result<PathBuf> {
+    /// Applies the distributable to a base ROM, and returns the output ROM.
+    pub fn apply(&self, options: ApplyOptions) -> Result<Rom> {
         self.open_scoped(options.baserom.clone(), |package| {
             let output_path = match options.output {
                 Some(path) => path,

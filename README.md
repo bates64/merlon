@@ -15,19 +15,27 @@ Features:
 - [ ] Package dependency management (`merlon add`)
 - [x] Experimental GUI support (`merlon gui` when built with `--features gui`)
 
-## Quickstart
+## Installation
 
 > **Note:** If you use Windows, you will need to use WSL 2. See the [decomp installation instructions](https://github.com/pmret/papermario/blob/main/INSTALL.md#wsl-2) for more information.
 
-1. [Install Rust](https://rustup.rs/)
-2. `cargo install merlon`
-3. `merlon new "My mod"`
-4. `cd my-mod`
-5. `merlon init`
-6. Make changes to the `papermario` repository directory and `git commit` them
-7. `merlon run` to compile and run the game with your changes applied
-8. `merlon export` to export the package into a distributable file
-9. As a user, `merlon apply "My mod 0.1.0.merlon"` to patch a base ROM with the distributable
+See [releases](https://github.com/nanaian/merlon/releases) for pre-built binaries.
+
+### From source
+
+Merlon is written in Rust. To build from source, you will need to install the Rust toolchain. See [rustup.rs](https://rustup.rs/) for instructions.
+
+Once you have the Rust toolchain installed, you can install Merlon from crates.io with:
+
+```bash
+cargo install merlon
+```
+
+If you have a clone of this repository, you can install Merlon with:
+
+```bash
+cargo install --path .
+```
 
 ## Supported platforms
 
@@ -53,29 +61,21 @@ Additionally, Merlon has a number of runtime dependencies that should be availab
 - `bzip2`
 - `openssl`
 
-## Installation
-
-See [releases](https://github.com/nanaian/merlon/releases) for pre-built binaries.
-
-### From source
-
-Merlon is written in Rust. To build from source, you will need to install the Rust toolchain. See [rustup.rs](https://rustup.rs/) for instructions.
-
-Once you have the Rust toolchain installed, you can install Merlon from crates.io with:
-
-```bash
-cargo install merlon
-```
-
-If you have a clone of this repository, you can install Merlon with:
-
-```bash
-cargo install --path .
-```
-
 ## Usage
 
 Merlon is a command-line tool. Use `merlon help` for more information.
+
+A quick tour:
+
+```
+$ merlon new "My mod"
+$ cd my-mod
+$ merlon init
+$ cd papermario && touch src/my-mod.c && git commit -am "add src/my-mod.c" && cd ..
+$ merlon build
+$ merlon export
+$ merlon apply "My mod 0.1.0.merlon"
+```
 
 ## Mod file format
 

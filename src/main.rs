@@ -165,8 +165,8 @@ impl Args {
                     println!("{}", package.copyright_notice()?);
                     Ok(())
                 })?;
-                let rom_path = distributable.apply(apply_args.options)?;
-                println!("Patched ROM: {}", rom_path.display());
+                let rom = distributable.apply(apply_args.options)?;
+                println!("Patched: {}", rom);
                 Ok(())
             },
             SubCommand::Open(open_args) => {
@@ -179,8 +179,8 @@ impl Args {
             SubCommand::Run(build_args) => {
                 if let Some(package) = package {
                     let initialised: InitialisedPackage = package.try_into()?;
-                    let rom_path = initialised.build_rom(build_args)?;
-                    merlon::emulator::run_rom(&rom_path)?;
+                    let rom = initialised.build_rom(build_args)?;
+                    merlon::emulator::run_rom(&rom)?;
                     Ok(())
                 } else {
                     bail!("cannot run package: not in a package directory.");
@@ -189,8 +189,8 @@ impl Args {
             SubCommand::Build(build_args) => {
                 if let Some(package) = package {
                     let initialised: InitialisedPackage = package.try_into()?;
-                    let rom_path = initialised.build_rom(build_args)?;
-                    println!("Output ROM: {}", rom_path.display());
+                    let rom = initialised.build_rom(build_args)?;
+                    println!("Built: {}", rom);
                     println!("You can run this ROM with `merlon run`.");
                     println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
                     Ok(())

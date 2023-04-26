@@ -1,0 +1,10 @@
+dependencies = []
+
+[metadata]
+id = [..]
+name = "Test mod"
+version = "0.1.0"
+authors = [[..]]
+description = "An amazing mod"
+license = "CC-BY-SA-4.0"
+keywords = []

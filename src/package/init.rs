@@ -27,8 +27,10 @@ use std::process::{Command, Stdio};
 use std::fs::{create_dir, create_dir_all, remove_dir_all, write, copy, remove_file};
 use anyhow::{Result, Error, bail, Context};
 use clap::Parser;
+use scopeguard::defer;
 
 use super::{Package, Id, Registry};
+use crate::rom::Rom;
 
 const MERLON_DIR_NAME: &str = ".merlon";
 const DEPENDENCIES_DIR_NAME: &str = ".merlon/dependencies";
@@ -185,7 +187,10 @@ impl InitialisedPackage {
                 bail!("failed to run decomp install.sh");
             }
 
+            let package_id_string = package.id()?.to_string();
             let initialised = Self::from_initialised(package)?;
+            initialised.git_create_branch(&package_id_string)?;
+            initialised.git_checkout_branch(&package_id_string)?;
             initialised.sync_with_repo()?;
             Ok(initialised)
         };
@@ -241,34 +246,31 @@ impl InitialisedPackage {
     pub fn sync_with_repo(&self) -> Result<()> {
         let package_id_str = self.package_id.to_string();
 
-        // Make sure we're on the branch for this package
         if self.git_current_branch()? != package_id_str {
-            bail!("repo is not on this package's branch, run `git checkout {}` in {}/ to fix", package_id_str, SUBREPO_DIR_NAME);
+            bail!("not on correct branch! run `git checkout {}` in {}/ to fix", package_id_str, SUBREPO_DIR_NAME);
         }
 
         // Stash any changes
-        let was_dirty = self.git_is_dirty()?;
-        if was_dirty {
+        if self.git_is_dirty()? {
             self.git_stash()?;
+            defer! { warn_if_err(self.git_stash_pop()); }
         }
 
         // Create dependency tree as branches, if they don't exist already
-        todo!("recreate dependency tree as branches");
-        self.git_create_branch(&package_id_str)?; // TODO: just switch to it
+        // TODO: recreate dependency tree as branches
+        if self.git_current_branch()? != package_id_str {
+            self.git_checkout_branch(&package_id_str)?;
+        }
 
         // Update splat.yaml with dependencies
         // TODO
         // TODO: also need to figure out whether to store splat.yaml in patches/ or not - probably not, but need merge strategy
 
-        if was_dirty {
-            self.git_stash_pop()?;
-        }
-
         Ok(())
     }
 
     /// Builds the ROM and returns the path to the output ROM.
-    pub fn build_rom(&self, options: BuildRomOptions) -> Result<PathBuf> {
+    pub fn build_rom(&self, options: BuildRomOptions) -> Result<Rom> {
         let dir = self.subrepo_path();
 
         // Configure
@@ -300,7 +302,7 @@ impl InitialisedPackage {
             std::fs::copy(rom, &output)?;
             Ok(output.into())
         } else {
-            Ok(rom)
+            Ok(rom.into())
         }
     }
 
@@ -327,7 +329,21 @@ impl InitialisedPackage {
         if !output.status.success() {
             panic!("failed to run git rev-parse");
         }
-        String::from_utf8(output.stdout).map_err(Into::into)
+        String::from_utf8(output.stdout)
+            .map(|s| s.trim().to_string())
+            .map_err(Into::into)
+    }
+
+    fn git_checkout_branch(&self, branch_name: &str) -> Result<()> {
+        let status = Command::new("git")
+            .arg("checkout")
+            .arg(&branch_name)
+            .current_dir(self.subrepo_path())
+            .status()?;
+        if !status.success() {
+            bail!("failed to checkout git branch {}", branch_name);
+        }
+        Ok(())
     }
 
     fn git_is_dirty(&self) -> Result<bool> {
@@ -372,5 +388,11 @@ impl TryFrom<Package> for InitialisedPackage {
 
     fn try_from(package: Package) -> Result<Self> {
         Self::from_initialised(package)
+    }
+}
+
+fn warn_if_err<T>(result: Result<T>) {
+    if let Err(err) = result {
+        log::warn!("{}", err);
     }
 }

@@ -1,12 +1,14 @@
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 use anyhow::{Result, bail};
 
-pub fn run_rom(rom_path: &Path) -> Result<std::process::ExitStatus> {
+use crate::rom::Rom;
+
+pub fn run_rom(rom: &Rom) -> Result<std::process::ExitStatus> {
     let emulator = find_emulator()?;
     Command::new(emulator)
-        .arg(rom_path)
+        .arg(rom.path())
         .status()
         .map_err(Into::into)
 }
