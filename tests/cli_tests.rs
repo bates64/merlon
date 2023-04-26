@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-use std::fs::copy;
 use anyhow::Result;
 
 #[test]

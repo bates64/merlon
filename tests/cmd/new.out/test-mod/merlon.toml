@@ -1,6 +1,6 @@
 dependencies = []
 
-[metadata]
+[package]
 id = [..]
 name = "Test mod"
 version = "0.1.0"
