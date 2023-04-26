@@ -1,27 +1,28 @@
-use std::collections::HashMap;
 use std::io::prelude::*;
 use std::{fs::File, path::Path, io::{BufReader, BufWriter}};
 use anyhow::Result;
-use heck::AsKebabCase;
 use serde::{Deserialize, Serialize};
+pub use uuid::Uuid as Id; // note: implements Copy
+
+pub mod name;
+use name::Name;
 
 // TODO: use taplo instead of toml to preserve comments etc
 
 /// `merlon.toml` file. This file is used to store metadata about a mod.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    /// The rev of the papermario submodule that this mod is based on
-    pub base_commit: String,
-
+pub struct Manifest {
     /// Package metadata
-    pub package: Package,
+    metadata: Metadata,
 
-    pub dependencies: HashMap<String, Dependency>,
+    /// Direct dependencies (not transitive)
+    dependencies: Vec<Dependency>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Package {
-    name: String,
+pub struct Metadata {
+    id: Id,
+    name: Name,
     version: String,
     authors: Vec<String>,
     description: String,
@@ -29,23 +30,27 @@ pub struct Package {
     keywords: Vec<String>,
 }
 
-impl Package {
-    pub fn name(&self) -> &str {
+impl Metadata {
+    pub fn id(&self) -> Id {
+        self.id
+    }
+
+    pub fn name(&self) -> &Name {
         &self.name
+    }
+
+    pub fn version(&self) -> &str {
+        &self.version
+    }
+
+    pub fn description(&self) -> &str {
+        &self.description
     }
 
     /// Validate package metadata, returning a list of errors
     pub fn validate(&self) -> Vec<String> {
         let mut errors = Vec::new();
-        if self.name.is_empty() {
-            errors.push("name cannot be empty".to_owned());
-        }
-        if format!("{}", AsKebabCase(&self.name)) != self.name {
-            errors.push("name must be kebab-case".to_owned());
-        }
-        if self.name.chars().any(|c| !c.is_ascii_alphanumeric() && c != '-') {
-            errors.push("name must be alphanumeric".to_owned());
-        }
+        // TODO: use newtypes for these, like Name
         if self.version.is_empty() {
             errors.push("version cannot be empty".to_owned());
         }
@@ -81,15 +86,44 @@ impl Package {
             eprintln!("warning: {}", error);
         }
     }
+
+    pub fn authors(&self) -> &Vec<String> {
+        &self.authors
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dependency {
-    pub version: String,
+    id: Id,
 }
 
-impl Config {
-    pub fn read_from_file(path: &Path) -> Result<Self> {
+impl Dependency {
+    pub fn id(&self) -> Id {
+        self.id
+    }
+}
+
+impl Manifest {
+    pub fn new(name: Name) -> Result<Self> {
+        Ok(Self {
+            metadata: Metadata {
+                id: Id::new_v4(),
+                name,
+                version: "0.1.0".to_owned(),
+                authors: vec![get_author()?],
+                description: "An amazing mod".to_owned(),
+                license: "CC-BY-SA-4.0".to_owned(),
+                keywords: vec![],
+            },
+            dependencies: vec![], // note: no papermario dependency
+        })
+    }
+
+    pub fn metadata(&self) -> &Metadata {
+        &self.metadata
+    }
+
+    pub fn read_from_path(path: &Path) -> Result<Self> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);
         let mut toml_string = String::new();
@@ -106,19 +140,16 @@ impl Config {
         Ok(())
     }
 
-    pub fn default_for_mod(mod_path: &Path) -> Result<Self> {
-        Ok(Self {
-            package: Package {
-                name: mod_path.file_name().unwrap().to_str().unwrap().to_owned(),
-                version: "0.1.0".to_owned(),
-                authors: vec![get_author()?],
-                description: "An amazing mod".to_owned(),
-                license: "CC-BY-SA-4.0".to_owned(),
-                keywords: vec![],
-            },
-            base_commit: get_base_commit(mod_path)?,
-            dependencies: HashMap::new(),
-        })
+    pub fn declare_direct_dependency(&mut self, dep_id: Id) -> Result<()> {
+        if self.dependencies.iter().any(|dep| dep.id == dep_id) {
+            return Err(anyhow::anyhow!("dependency already declared"));
+        }
+        self.dependencies.push(Dependency { id: dep_id });
+        Ok(())
+    }
+
+    pub fn iter_direct_dependencies(&self) -> impl Iterator<Item = &Dependency> {
+        self.dependencies.iter()
     }
 }
 

@@ -1,9 +1,8 @@
-use std::{fs, process::Command};
+use std::path::PathBuf;
 use clap::Parser;
-use anyhow::{Result, bail};
-use merlon::baserom::Baserom;
-use merlon::decomp_repo::LocalDecompRepo;
-use merlon::package_config::Config;
+use anyhow::Result;
+use heck::AsKebabCase;
+use merlon::package::Package;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -12,89 +11,24 @@ pub struct Args {
     name: String,
 }
 
-pub fn run(args: Args) -> Result<()> {
-    // TODO: load from config file with `config` crate
+pub fn run(dir: Option<PathBuf>, args: Args) -> Result<()> {
+    // Create the package
+    let current_dir = std::env::current_dir()?;
+    let dir = dir.unwrap_or_else(|| current_dir.join(format!("{}", AsKebabCase(&args.name))));
+    let package = Package::new(args.name, dir)?;
 
-    // Form
-    let baserom = Baserom::get()?;
-    let local_decomp_repo = LocalDecompRepo::try_get()?;
-
-    // Create mod dir
-    let mod_dir = std::env::current_dir()?.join(&args.name);
-    if mod_dir.exists() {
-        bail!("directory {:?} already exists", mod_dir);
-    }
-    fs::create_dir(&mod_dir)?;
-
-    // Initialise git repo
-    let status = Command::new("git")
-        .arg("init")
-        .current_dir(&mod_dir)
-        .status()?;
-    if !status.success() {
-        bail!("failed to initialise git repo");
-    }
-
-    // Add papermario as a git submodule
-    let mut command = Command::new("git");
-    command
-        .arg("submodule")
-        .arg("add")
-        .arg("-b").arg("main");
-    if let Some(repo) = local_decomp_repo.as_ref() {
-        command.arg("--reference").arg(repo.path());
-    }
-    command
-        .arg("https://github.com/pmret/papermario.git")
-        .arg("papermario")
-        .current_dir(&mod_dir);
-    if !command.status()?.success() {
-        bail!("failed to add papermario submodule");
-    }
-
-    // Copy baserom
-    let baserom_path = baserom.path();
-    let baserom_copy_path = mod_dir.join("papermario/ver/us/baserom.z64");
-    fs::copy(baserom_path, baserom_copy_path)?;
-
-    // Copy template files
-    fs::write(mod_dir.join(".gitignore"), include_str!("../templates/gitignore"))?;
-    fs::write(mod_dir.join("LICENSE.txt"), include_str!("../templates/CC-BY-SA-4.0.txt"))?;
-    fs::create_dir(mod_dir.join(".vscode"))?;
-    fs::write(mod_dir.join(".vscode/c_cpp_properties.json"), include_str!("../templates/.vscode/c_cpp_properties.json"))?;
-    fs::write(mod_dir.join(".vscode/extensions.json"), include_str!("../templates/.vscode/extensions.json"))?;
-    fs::write(mod_dir.join(".vscode/settings.json"), include_str!("../templates/.vscode/settings.json"))?;
-    fs::write(mod_dir.join(".vscode/tasks.json"), include_str!("../templates/.vscode/tasks.json"))?;
-
-    // Write readme
-    let readme = include_str!("../templates/README.md")
-        .replace("{{mod_name}}", &args.name);
-    fs::write(mod_dir.join("README.md"), readme)?;
-
-    // Write merlon.toml
-    let merlon_toml_path = mod_dir.join("merlon.toml");
-    Config::default_for_mod(&mod_dir)?.write_to_file(&merlon_toml_path)?;
-
-    // Create empty asset directory of the same name as the mod
-    fs::create_dir_all(&mod_dir.join("papermario/assets").join(&args.name))?;
-
-    // Run install script
-    if inquire::Confirm::new("Run install.sh?").with_default(true).prompt()? {
-        let status = Command::new("./install.sh")
-            .current_dir(&mod_dir.join("papermario"))
-            .status()?;
-        if !status.success() {
-            eprintln!("install.sh failed, you may need to run it manually.");
-            eprintln!("If you see an error like 'Sorry, this is not a GIT repository', you can ignore it.");
-        }
-    }
+    // Try and make path relative to current directory, but if that fails, just use the absolute path
+    let path_relative_to_current = package.path()
+        .strip_prefix(current_dir)
+        .unwrap_or_else(|_| package.path());
 
     // Done!
     println!("");
-    println!("Created mod: {:?}", mod_dir.file_stem().unwrap_or_default());
-    println!("To build and run this mod, run the following commands:");
+    println!("Created package: {}", &package);
+    println!("To build and run this package, run the following commands:");
     println!("");
-    println!("    cd {:?}", mod_dir);
+    println!("    cd {:?}", path_relative_to_current);
+    println!("    merlon init");
     println!("    merlon run");
     println!("");
 

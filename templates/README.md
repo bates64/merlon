@@ -1,2 +1,2 @@
-# {{mod_name}}
+# {{package_name}}
 

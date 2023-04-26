@@ -3,32 +3,31 @@
 [![](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/test.yml?branch=main)](https://github.com/nanaian/merlon/actions)
 [![](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding-279322074412089344)
 
-Merlon is a mod manager for the Paper Mario (N64) decompilation. It creates patches that apply to source code rather than binary files.
+Merlon is a mod package manager for the Paper Mario (N64) decompilation.
 
 Features:
 
-- [x] Create mods (`merlon new`)
-- [x] Package mods for distribution (`merlon pack`)
-- [x] Apply mod packages (`merlon apply`)
-- [x] Compile to a modded ROM (`merlon build`)
-- [x] Run the modded ROM (`merlon run`)
-- [x] Merge mods together to create modpacks (`merlon apply` multiple times)
+- [x] Create packages (`merlon new`)
+- [x] Export package to a file for distribution (`merlon export`)
+- [x] Apply distributable files to a base ROM (`merlon apply`)
+- [x] Compile current package to a modded ROM (`merlon build`)
+- [x] Run modded ROM in an emulator (`merlon run`)
+- [ ] Package dependency management (`merlon add`)
 - [x] Experimental GUI support (`merlon gui` when built with `--features gui`)
-- [ ] Shortcut to apply mods and compile
-- [ ] Shortcut to combine mods together to create modpacks
 
 ## Quickstart
 
 > **Note:** If you use Windows, you will need to use WSL 2. See the [decomp installation instructions](https://github.com/pmret/papermario/blob/main/INSTALL.md#wsl-2) for more information.
 
-1.  [Install Rust](https://rustup.rs/)
+1. [Install Rust](https://rustup.rs/)
 2. `cargo install merlon`
-3. `merlon new my-mod`
+3. `merlon new "My mod"`
 4. `cd my-mod`
-5. Make changes to `my-mod/papermario`. You can `git commit` within as usual.
-6. `merlon run` to compile and run the game with your mod applied
-7. `merlon pack my-mod.merlon` to package your mod into a distributable file
-8. `merlon apply other-mod.merlon` to apply another mod to your mod
+5. `merlon init`
+6. Make changes to the `papermario` repository directory and `git commit` them
+7. `merlon run` to compile and run the game with your changes applied
+8. `merlon export` to export the package into a distributable file
+9. As a user, `merlon apply "My mod 0.1.0.merlon"` to patch a base ROM with the distributable
 
 ## Supported platforms
 

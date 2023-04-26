@@ -2,18 +2,15 @@
 
 use clap::Parser;
 use anyhow::{Result, bail};
-use merlon::mod_dir::ModDir;
+use merlon::package::{Package, InitialisedPackage, Distributable};
 use std::path::PathBuf;
 
 mod new;
-mod pack;
-mod apply;
-mod build;
 
-/// Mod manager for the Paper Mario (N64) decompilation.
+/// Mod package manager for the Paper Mario (N64) decompilation.
 /// 
-/// Merlon allows you to create mods that can be applied to the decomp source code, and to package mods
-/// into `.merlon` files that can be applied to a copy of the decomp source code.
+/// Merlon allows you to create mod packages by editing the decomp source code, and to export packages
+/// into distributable `.merlon` patch files that can be applied to a base ROM with `merlon apply`.
 ///
 /// For assistance with Merlon, join the #merlon channel of the Paper Mario Modding Discord server:
 ///
@@ -31,45 +28,61 @@ struct Args {
     #[clap(subcommand)]
     subcmd: SubCommand,
 
-    /// The directory of the mod to operate on.
+    /// The directory of the package to operate on.
     /// 
-    /// Defaults the current git repository directory, or the current directory if not in a git repository.
-    /// Merlon mod directories can be identified by the presence of a `merlon.toml` file.
+    /// If not set, a `merlon.toml` file will be searched for in the current directory and its parents.
     #[arg(short, long)]
     directory: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug)]
 enum SubCommand {
-    /// Create a new mod.
-    ///
-    /// This will create a new git repository in the specified directory.
-    /// The repository will have a `papermario` submodule, which will be set to the latest commit on the `main` branch.
+    /// Create a new package.
     New(new::Args),
 
-    /// Package current mod for distribution.
-    ///
-    /// Mods are distributed as `.merlon` files, which are encrypted, compressed tarballs of git patches.
-    /// Merlon files are encrypted using the base ROM as the key.
-    /// The patches are applied to the `papermario` submodule in the mod's directory.
-    Pack(pack::Args),
+    /// Initialise this package for editing and building.
+    Init(merlon::package::init::InitialiseOptions),
 
-    /// Apply a mod package to the current mod.
-    Apply(apply::Args),
+    /// Export this package as a `.merlon` file for distribution.
+    Export(merlon::package::distribute::ExportOptions),
+
+    /// Apply a distributable to a base ROM.
+    Apply(ApplyArgs),
+
+    /// Open a distributable's source code.
+    Open(OpenArgs),
 
     /// Run current mod in an emulator.
-    Run(build::Args),
+    Run(merlon::package::init::BuildRomOptions),
 
     /// Build current mod into a ROM.
-    Build(build::Args),
+    Build(merlon::package::init::BuildRomOptions),
 
     /// Launch the GUI.
     #[cfg(feature = "gui")]
     Gui,
 }
 
+#[derive(Parser, Debug)]
+struct ApplyArgs {
+    #[clap(flatten)]
+    pub options: merlon::package::distribute::ApplyOptions,
+
+    pub distributable: PathBuf,
+}
+
+#[derive(Parser, Debug)]
+struct OpenArgs {
+    #[clap(flatten)]
+    pub options: merlon::package::distribute::OpenOptions,
+
+    pub distributable: PathBuf,
+}
+
 #[cfg(feature = "gui")]
 fn main() -> Result<()> {
+    pretty_env_logger::init();
+
     // If TERM is not set, or MERLON_GUI=1, run the GUI.
     let is_gui = std::env::var("TERM").is_err() || matches!(std::env::var("MERLON_GUI"), Ok(v) if v == "1");
 
@@ -82,6 +95,7 @@ fn main() -> Result<()> {
 
 #[cfg(not(feature = "gui"))]
 fn main() -> Result<()> {
+    pretty_env_logger::init();
     main_cli()
 }
 
@@ -106,65 +120,92 @@ fn main_gui() -> Result<()> {
 
 impl Args {
     pub fn run(self) -> Result<()> {
-        // Get mod directory from args, or current directory if not specified.
-        let mut mod_dir = if let Some(directory) = self.directory {
+        // Get package from args, or current directory if not specified.
+        let mut package = if let Some(directory) = self.directory.as_ref() {
             // If a directory is provided and its invalid, error.
-            Some(ModDir::try_from(directory)?)
+            Some(Package::try_from(directory.clone())?)
         } else {
-            // Otherwise, try to find the current mod directory, but it's OK if its None.
-            ModDir::current().ok()
+            // Otherwise, try to find the current package directory
+            Package::current()?
         };
 
-        if let Some(mod_dir) = &mut mod_dir {
-            // TODO: make sure the submodule is up to date.
-            mod_dir.config()?.package.print_validation_warnings();
+        if let Some(package) = &mut package {
+            package.manifest()?.metadata().print_validation_warnings();
         }
 
         // Run subcommand.
         match self.subcmd {
             SubCommand::New(new_args) => {
-                if let Some(mod_dir) = &mut mod_dir {
-                    bail!("cannot create new mod: already in a mod directory: {}", mod_dir.path().display());
+                if let Some(package) = &mut package {
+                    bail!("cannot create new package: already in a package: {}", package);
                 } else {
-                    new::run(new_args)
+                    new::run(self.directory, new_args)
                 }
             },
-            SubCommand::Pack(package_args) => {
-                if let Some(mod_dir) = &mut mod_dir {
-                    pack::run(mod_dir, package_args)
+            SubCommand::Init(init_args) => {
+                if let Some(package) = package {
+                    InitialisedPackage::initialise(package, init_args)?;
+                    Ok(())
                 } else {
-                    bail!("cannot package mod: not in a mod directory.");
+                    bail!("cannot initialise package: not in a package directory.");
+                }
+            },
+            SubCommand::Export(export_args) => {
+                if let Some(package) = package {
+                    let exported = package.export_distributable(export_args)?;
+                    println!("Exported package: {}", exported);
+                    Ok(())
+                } else {
+                    bail!("cannot export package: not in a package directory.");
                 }
             },
             SubCommand::Apply(apply_args) => {
-                if let Some(mod_dir) = &mut mod_dir {
-                    apply::run(mod_dir, apply_args)
-                } else {
-                    bail!("cannot apply mod: not in a mod directory.");
-                }
+                let distributable = Distributable::try_from(apply_args.distributable)?;
+                distributable.open_scoped(apply_args.options.baserom.clone(), |package| {
+                    println!("{}", package.copyright_notice()?);
+                    Ok(())
+                })?;
+                let rom_path = distributable.apply(apply_args.options)?;
+                println!("Patched ROM: {}", rom_path.display());
+                Ok(())
             },
-            SubCommand::Run(run_args) => {
-                if let Some(mod_dir) = &mut mod_dir {
-                    let rom_path = build::build_mod(mod_dir, run_args)?;
+            SubCommand::Open(open_args) => {
+                let distributable = Distributable::try_from(open_args.distributable)?;
+                let package = distributable.open_to_dir(open_args.options)?;
+                println!("{}", package.copyright_notice()?);
+                println!("Opened {} to directory {}", package, package.path().display());
+                Ok(())
+            },
+            SubCommand::Run(build_args) => {
+                if let Some(package) = package {
+                    let initialised: InitialisedPackage = package.try_into()?;
+                    let rom_path = initialised.build_rom(build_args)?;
                     merlon::emulator::run_rom(&rom_path)?;
                     Ok(())
                 } else {
-                    bail!("cannot run mod: not in a mod directory.");
+                    bail!("cannot run package: not in a package directory.");
                 }
             },
             SubCommand::Build(build_args) => {
-                if let Some(mod_dir) = &mut mod_dir {
-                    let rom_path = build::build_mod(mod_dir, build_args)?;
+                if let Some(package) = package {
+                    let initialised: InitialisedPackage = package.try_into()?;
+                    let rom_path = initialised.build_rom(build_args)?;
                     println!("Output ROM: {}", rom_path.display());
                     println!("You can run this ROM with `merlon run`.");
                     println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
                     Ok(())
                 } else {
-                    bail!("cannot build mod: not in a mod directory.");
+                    bail!("cannot build package: not in a mod directory.");
                 }
             },
             #[cfg(feature = "gui")]
             SubCommand::Gui => main_gui(),
         }
     }
+}
+
+#[test]
+fn verify_cli() {
+    use clap::CommandFactory;
+    Args::command().debug_assert()
 }
