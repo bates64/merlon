@@ -18,6 +18,11 @@ jobs:
 
     - uses: Swatinem/rust-cache@v1
 
+    - name: Download base ROM
+      run: curl -L $BASEROM_US_URL -o tests/baserom.z64
+      env:
+        BASEROM_US_URL: ${{ secrets.BASEROM_US_URL }}
+
     - name: Run tests
       uses: actions-rs/cargo@v1
       with:
