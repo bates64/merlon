@@ -134,12 +134,15 @@ impl Package {
         manifest.write_to_file(&path)
     }
 
-    pub fn apply_patches_to_repo(&self, repo: &Path) -> Result<()> {
+    pub(crate) fn apply_patches_to_decomp_repo(&self, repo: &Path) -> Result<()> {
         let mut patch_files = fs::read_dir(&self.path.join(PATCHES_DIR_NAME))?
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.extension().map(|ext| ext == "patch").unwrap_or(false))
             .collect::<Vec<_>>();
         patch_files.sort_unstable();
+        if patch_files.is_empty() {
+            return Ok(())
+        }
         let status = Command::new("git")
             .arg("am")
             .arg("--3way")
@@ -162,6 +165,20 @@ impl Package {
         let mut file = fs::File::open(self.path.join(LICENSE_FILE_NAME))?;
         file.read_to_string(&mut notice)?;
         Ok(notice)
+    }
+
+    /// Copies the package to the given path and updates. The path must not exist.
+    /// Effectively a set_path method.
+    pub fn clone_to_dir(&self, path: PathBuf) -> Result<Self> {
+        if path.exists() {
+            bail!("{} already exists", path.display());
+        }
+        // Copy entire directory structure
+        fs::create_dir_all(&path)?;
+        let mut copy_opts = fs_extra::dir::CopyOptions::new();
+        copy_opts.content_only = true;
+        fs_extra::dir::copy(&self.path, &path, &copy_opts)?;
+        Self::try_from(path)
     }
 }
 

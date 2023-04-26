@@ -12,7 +12,7 @@ Features:
 - [x] Apply distributable files to a base ROM (`merlon apply`)
 - [x] Compile current package to a modded ROM (`merlon build`)
 - [x] Run modded ROM in an emulator (`merlon run`)
-- [ ] Package dependency management (`merlon add`)
+- [x] Package dependency management (`merlon add`)
 - [x] Experimental GUI support (`merlon gui` when built with `--features gui`)
 
 ## Installation
@@ -71,7 +71,7 @@ A quick tour:
 $ merlon new "My mod"
 $ cd my-mod
 $ merlon init
-$ cd papermario && touch src/my-mod.c && git commit -am "add src/my-mod.c" && cd ..
+$ touch papermario/src/my-mod.c && git -C papermario add src/my-mod.c && git -C papermario commit -m "add src/my-mod.c"
 $ merlon build
 $ merlon export
 $ merlon apply "My mod 0.1.0.merlon"

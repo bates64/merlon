@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashSet, HashMap, BinaryHeap};
 
 use anyhow::{Result, bail};
 
@@ -51,6 +51,10 @@ impl Registry {
         }
     }
 
+    pub fn has(&self, id: Id) -> bool {
+        self.packages.contains_key(&id)
+    }
+
     pub fn edit<F, T>(&mut self, id: Id, f: F) -> Result<T>
     where
         F: FnOnce(&mut Package) -> Result<T>
@@ -59,6 +63,10 @@ impl Registry {
         let ret = f(&mut package)?;
         self.register(package)?;
         Ok(ret)
+    }
+
+    pub fn package_ids(&self) -> impl Iterator<Item = Id> + '_ {
+        self.packages.keys().copied()
     }
 }
 
@@ -176,6 +184,90 @@ impl Registry {
         }
         Ok(())
     }
+
+    pub fn calc_dependency_patch_order(&self, root: Id) -> Result<Vec<Id>> {
+        // https://en.wikipedia.org/wiki/Longest_path_problem#Acyclic_graphs
+
+        // Topological ordering will be wrong if there are orphaned packages
+        if !self.get_orphans(root)?.is_empty() {
+            bail!("there are orphaned packages");
+        }
+
+        // Because all graph weights are the same, we can just use the topological ordering
+        let ordering = self.topological_ordering()?;
+
+        // The root package should be the final package in the ordering
+        if ordering.last() != Some(&root) {
+            bail!("root package is not the final package in the topological ordering");
+        }
+
+        Ok(ordering)
+    }
+
+    pub fn topological_ordering(&self) -> Result<Vec<Id>> {
+        // https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search
+        let mut topological_ordering = Vec::new();
+        let mut not_visited: BinaryHeap<Id> = self.packages.keys().map(|&k| k).collect();
+        let mut visit_in_progress = HashSet::new(); // "temporary mark"
+        let mut visited = HashSet::new(); // "permanent mark"
+        while let Some(id) = not_visited.pop() {
+            self.topological_ordering_visit(id, &mut topological_ordering, &mut visit_in_progress, &mut visited)?;
+        }
+        Ok(topological_ordering)
+    }
+
+    fn topological_ordering_visit(
+        &self,
+        id: Id,
+        topological_ordering: &mut Vec<Id>, 
+        visit_in_progress: &mut HashSet<Id>,
+        visited: &mut HashSet<Id>,
+    ) -> Result<()> {
+        if !visited.contains(&id) {
+            if visit_in_progress.contains(&id) {
+                bail!("found circular dependency {}", id);
+            }
+            visit_in_progress.insert(id);
+            let package = self.get_or_error(id)?;
+            let manifest = package.manifest()?;
+            for dependency in manifest.iter_direct_dependencies() {
+                if let Dependency::Package { id, .. } = dependency {
+                    self.topological_ordering_visit(*id, topological_ordering, visit_in_progress, visited)?;
+                }
+            }
+            visit_in_progress.remove(&id);
+            visited.insert(id);
+            topological_ordering.push(id);
+        }
+        Ok(())
+    }
+
+    /// Returns packages that don't appear in the dependency tree for the given root package.
+    pub fn get_orphans(&self, root: Id) -> Result<HashSet<Id>> {
+        let dependency_ids: HashSet<Id> = self.get_dependencies(root)?
+            .into_iter()
+            .filter_map(|dep| {
+                if let Dependency::Package { id, .. } = dep {
+                    Some(id)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        Ok(self.packages.keys()
+            .map(|&id| id)
+            .filter(|&id| id != root && !dependency_ids.contains(&id))
+            .collect())
+    }
+
+    /// Unregisters and deletes the directories for all orphaned packages.
+    pub fn delete_orphans(&mut self, root: Id) -> Result<()> {
+        for id in self.get_orphans(root)? {
+            let package = self.take(id)?;
+            std::fs::remove_dir_all(package.path())?;
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -245,6 +337,27 @@ mod test {
             })
         })?;
         assert!(registry.check_version_compatibility().is_err());
+
+        // Topological ordering
+        let sorted = registry.topological_ordering()?;
+        assert_eq!(sorted, vec![base, c, b, a]); // c, b can be in either order
+
+        // Add an orphan package that nothing depends on
+        assert!(registry.get_orphans(a)?.is_empty());
+        let orphan_path = dir.path().join("orphan.merlon");
+        let orphan = Package::new("Orphan", orphan_path.clone())?;
+        let orphan = registry.register(orphan)?;
+        let sorted = registry.topological_ordering()?;
+        // orphan must be in last 2 places (it can trade with a)
+        assert!(sorted[sorted.len() - 2] == orphan || sorted[sorted.len() - 1] == orphan);
+        assert_eq!(registry.get_orphans(a)?, vec![orphan].into_iter().collect());
+        registry.delete_orphans(a)?;
+        assert!(!registry.has(orphan));
+        assert!(!orphan_path.exists());
+
+        // Add a circular dependency
+        registry.add_direct_dependency(c, a)?;
+        assert!(registry.topological_ordering().is_err());
 
         Ok(())
     }

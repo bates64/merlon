@@ -1,7 +1,7 @@
 #![cfg_attr(feature = "gui", windows_subsystem = "windows")]
 
 use clap::Parser;
-use anyhow::{Result, bail};
+use anyhow::{Result, Context, bail};
 use merlon::package::{Package, InitialisedPackage, Distributable};
 use std::path::PathBuf;
 
@@ -52,14 +52,17 @@ enum SubCommand {
     /// Open a distributable's source code.
     Open(OpenArgs),
 
-    /// Run current mod in an emulator.
+    /// Run the current package in an emulator.
     Run(merlon::package::init::BuildRomOptions),
 
-    /// Build current mod into a ROM.
+    /// Build the current package into a ROM.
     Build(merlon::package::init::BuildRomOptions),
 
     /// Update all dependencies, including packages and the decomp.
     Update,
+
+    /// Add a dependency to the current package.
+    Add(merlon::package::init::AddDependencyOptions),
 
     /// Launch the GUI.
     #[cfg(feature = "gui")]
@@ -155,6 +158,12 @@ impl Args {
             },
             SubCommand::Export(export_args) => {
                 if let Some(package) = package {
+                    // If the package is initialised, sync it so the patches dir updates
+                    if InitialisedPackage::is_initialised(&package)? {
+                        let initialised = InitialisedPackage::try_from(package.clone())?;
+                        initialised.sync_repo()?;
+                    }
+
                     let exported = package.export_distributable(export_args)?;
                     println!("Exported package: {}", exported);
                     Ok(())
@@ -205,12 +214,24 @@ impl Args {
                 if let Some(package) = package {
                     let initialised: InitialisedPackage = package.try_into()?;
                     initialised.update_decomp()?;
-                    initialised.sync_with_repo()?;
+                    initialised.sync_repo()?;
                     Ok(())
                 } else {
                     bail!("cannot update package: not in a package directory.");
                 }
             }
+            SubCommand::Add(add_args) => {
+                if let Some(package) = package {
+                    let mut initialised: InitialisedPackage = package.try_into()?;
+                    let id = initialised.add_dependency(add_args)?;
+                    let package = initialised.registry().get_or_error(id)?;
+                    println!("Added dependency: {}", package);
+                    initialised.sync_repo()
+                        .context("failed to sync repo, is a dependency missing?")
+                } else {
+                    bail!("cannot add dependency: not in a package directory.");
+                }
+            },
             #[cfg(feature = "gui")]
             SubCommand::Gui => main_gui(),
         }

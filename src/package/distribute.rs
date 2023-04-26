@@ -78,11 +78,11 @@ pub struct OpenOptions {
     ///
     /// If not specified, the package name in kebab-case will be used.
     #[arg(short, long)]
-    output: Option<PathBuf>,
+    pub output: Option<PathBuf>,
 
     /// The base ROM path.
     #[arg(long)]
-    baserom: PathBuf,
+    pub baserom: PathBuf,
 }
 
 impl Package {
@@ -296,13 +296,19 @@ impl Distributable {
             })
         })
     }
+
+    pub fn manifest(&self, baserom: PathBuf) -> Result<Manifest> {
+        self.open_scoped(baserom, |package| {
+            package.manifest()
+        })
+    }
 }
 
 impl TryFrom<PathBuf> for Distributable {
     type Error = anyhow::Error;
 
     fn try_from(path: PathBuf) -> Result<Self> {
-        if is_locked_package(&path) {
+        if is_distributable_package(&path) {
             Ok(Self { path })
         } else {
             bail!("{} is not an exported Merlon package", path.display());
@@ -316,6 +322,6 @@ impl fmt::Display for Distributable {
     }
 }
 
-pub fn is_locked_package(path: &Path) -> bool {
+pub fn is_distributable_package(path: &Path) -> bool {
     path.is_file() && path.extension().unwrap_or_default() == EXTENSION
 }

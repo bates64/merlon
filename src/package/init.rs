@@ -24,12 +24,14 @@
 
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
-use std::fs::{create_dir, create_dir_all, remove_dir_all, write, copy, remove_file};
+use std::fs::{create_dir, create_dir_all, remove_dir_all, write, copy, remove_file, rename};
 use anyhow::{Result, Error, bail, Context};
 use clap::Parser;
 use scopeguard::defer;
+use semver::VersionReq;
 
-use super::{Package, Id, Registry};
+use super::manifest::Dependency;
+use super::{Package, Id, Registry, PATCHES_DIR_NAME, Distributable};
 use crate::rom::Rom;
 
 const MERLON_DIR_NAME: &str = ".merlon";
@@ -66,6 +68,13 @@ pub struct BuildRomOptions {
     /// Path to output ROM to.
     #[arg(short, long)]
     pub output: Option<PathBuf>,
+}
+
+#[derive(Parser, Debug)]
+pub struct AddDependencyOptions {
+    /// Path to the package to add as a dependency.
+    #[arg(long)]
+    pub path: PathBuf,
 }
 
 impl Package {
@@ -118,6 +127,14 @@ impl InitialisedPackage {
         self.package().path().join(SUBREPO_DIR_NAME)
     }
 
+    pub fn registry(&self) -> &Registry {
+        &self.registry
+    }
+
+    pub fn set_registry(&mut self, registry: Registry) {
+        self.registry = registry;
+    }
+
     pub fn initialise(package: Package, options: InitialiseOptions) -> Result<Self> {
         if Self::is_initialised(&package)? {
             bail!("package is already initialised");
@@ -146,9 +163,10 @@ impl InitialisedPackage {
             }
 
             if let Some(rev) = options.rev {
-                // Checkout revision
+                // Reset to revision
                 let status = Command::new("git")
-                    .arg("checkout")
+                    .arg("reset")
+                    .arg("--hard")
                     .arg(&rev)
                     .current_dir(package.path().join(SUBREPO_DIR_NAME))
                     .status()?;
@@ -203,12 +221,7 @@ impl InitialisedPackage {
                 bail!("failed to run decomp install.sh");
             }
 
-            let package_id_string = package.id()?.to_string();
             let initialised = Self::from_initialised(package)?;
-            initialised.update_decomp()?;
-            initialised.git_create_branch(&package_id_string)?;
-            initialised.git_checkout_branch(&package_id_string)?;
-            initialised.sync_with_repo()?;
             Ok(initialised)
         };
         match do_it() {
@@ -253,30 +266,63 @@ impl InitialisedPackage {
 
     /// Perform a repo sync.
     /// 
-    /// This will recreate the dependency tree in the subrepo, where each dependency is a branch.
+    /// This will recreate the dependency tree in the subrepo, where each dependency has a branch.
     /// Additionally, a branch will be created for this package if it doesn't exist, and the branch will be off of
     /// the branches that this package directly depends on.
+    /// Each branch will have the respective package patches applied to it.
     /// 
     /// splat.yaml will be updated so that the asset_stack is correct.
-    /// 
-    /// Any commits since the last branch will be stashed, and then unstashed after the sync.
-    pub fn sync_with_repo(&self) -> Result<()> {
-        let package_id_str = self.package_id.to_string();
-
-        if self.git_current_branch()? != package_id_str {
-            bail!("not on correct branch! run `git checkout {}` in {}/ to fix", package_id_str, SUBREPO_DIR_NAME);
+    pub fn sync_repo(&self) -> Result<()> {
+        // Make sure commits are backed up
+        let package_id_string = self.package_id.to_string();
+        if self.git_branch_exists(&package_id_string)? {
+            self.update_patches_dir()
+                .context("failed to update patches dir")?;
         }
 
-        // Stash any changes
-        if self.git_is_dirty()? {
-            self.git_stash()?;
-            defer! { warn_if_err(self.git_stash_pop()); }
+        // Switch to main so we can delete branches
+        self.git_checkout_branch("main")?;
+
+        // Delete all branches, if they exist
+        let dependencies_including_self = {
+            let mut deps = self.registry.get_dependencies(self.package_id)?;
+            let manifest = self.package().manifest()?;
+            let version = manifest.metadata().version();
+            deps.insert(Dependency::Package {
+                id: self.package_id,
+                version: VersionReq {
+                    comparators: vec![semver::Comparator {
+                        op: semver::Op::Exact,
+                        major: version.major,
+                        minor: Some(version.minor),
+                        patch: Some(version.patch),
+                        pre: version.pre.clone(),
+                    }],
+                }
+            });
+            deps
+        };
+        for dependency in dependencies_including_self {
+            if let Dependency::Package { id, .. } = dependency {
+                let id_string = id.to_string();
+                if self.git_branch_exists(&id_string)? {
+                    self.git_delete_branch(&id_string)?;
+                }
+            }
         }
 
-        // Create dependency tree as branches, if they don't exist already
-        // TODO: recreate dependency tree as branches
-        if self.git_current_branch()? != package_id_str {
-            self.git_checkout_branch(&package_id_str)?;
+        // Create dependency tree as branches
+        let patch_order = self.registry.calc_dependency_patch_order(self.package_id)?;
+        let repo = self.subrepo_path();
+        for id in patch_order {
+            let id_string = id.to_string();
+            self.git_create_branch(&id_string)?;
+            self.git_checkout_branch(&id_string)?;
+            let package = self.registry.get_or_error(id)?;
+            package.apply_patches_to_decomp_repo(&repo)?;
+        }
+        if self.git_current_branch()? != self.package_id.to_string() {
+            bail!("patch order was incorrect");
         }
 
         // Update splat.yaml with dependencies
@@ -321,6 +367,119 @@ impl InitialisedPackage {
         } else {
             Ok(rom.into())
         }
+    }
+
+    /// Writes the patches required to take the repo from the nearest dependency to this package's branch into the patches dir.
+    pub fn update_patches_dir(&self) -> Result<()> {
+        let package_id_str = self.package_id.to_string();
+        if self.git_current_branch()? != package_id_str {
+            bail!("repo is not on package branch {}", package_id_str);
+        }
+        if self.git_is_dirty()? {
+            bail!("repo is dirty, commit changes and try again");
+        }
+
+        // Backup and recreate patches dir
+        let dir = self.package().path().join(PATCHES_DIR_NAME);
+        let backup_dir = dir.with_extension("bak");
+        if backup_dir.exists() {
+            bail!("patches backup dir {} already exists", backup_dir.display());
+        }
+        if dir.exists() {
+            rename(&dir, &backup_dir)?;
+            defer! {
+                // If the backup dir still exists, it means we failed somewhere, so restore the original dir
+                if backup_dir.exists() {  
+                    let _ = remove_dir_all(&dir);
+                    let _ = rename(&backup_dir, &dir);
+                }
+            }
+        } else {
+            create_dir(&dir)?;
+        }
+
+        // Figure out which branch to diff against
+        let topological_ordering = self.registry().topological_ordering()?;
+        let self_index = topological_ordering.iter().position(|id| *id == self.package_id).unwrap();
+        let diff_against = if self_index == 0 {
+            "main".to_string()
+        } else {
+            topological_ordering[self_index - 1].to_string()
+        };
+
+        // Create patches
+        let status = Command::new("git")
+            .arg("format-patch")
+            .arg(format!("{}..HEAD", diff_against))
+            .arg("-o").arg(&dir.canonicalize()?)
+            .arg("--minimal")
+            .arg("--binary")
+            .arg("--ignore-cr-at-eol")
+            .arg("--function-context") // Maybe?
+            .arg("--keep-subject")
+            .arg("--no-merges")
+            .arg("--no-stdout")
+            .arg("--")
+            .arg("src")
+            .arg("include")
+            .arg("assets") //.arg(format!("assets/{}", package_name))
+            .arg("ver/us")
+            .arg("--no-track") // Don't track the branch on origin, since origin is the original decomp repo
+            .current_dir(self.subrepo_path())
+            .status()?;
+        if !status.success() {
+            bail!("failed git format-patch");
+        }
+
+        // Success, so delete backup dir
+        if backup_dir.exists() {
+            remove_dir_all(backup_dir)?;
+        }
+
+        Ok(())
+    }
+
+    /// Adds a dependency by copying it into the dependencies directory and registering it.
+    /// Specifically, it will be copied into `.merlon/dependencies/<package_id>`.
+    pub fn add_dependency(&mut self, options: AddDependencyOptions) -> Result<Id> {
+        let path = options.path;
+        let dependencies_dir = self.package().path().join(DEPENDENCIES_DIR_NAME);
+        let id = if super::is_unexported_package(&path) {
+            let package = Package::try_from(path)?;
+
+            // Could also do symbolic link?
+            let package = package.clone_to_dir(dependencies_dir.join(package.id()?.to_string()))
+                .context("failed to clone package to dependencies dir")?;
+
+            // If package has any dependencies we don't have, add them too
+            if let Ok(initialised) = InitialisedPackage::try_from(package.clone()) {
+                for id in initialised.registry().package_ids() {
+                    if !self.registry.has(id) {
+                        self.add_dependency(AddDependencyOptions {
+                            path: self.registry.get_or_error(id)?.path().to_owned(),
+                        })?;
+                    }
+                }
+            }
+
+            self.registry.register(package)?
+        } else if super::distribute::is_distributable_package(&path) {
+            let distributable = Distributable::try_from(path)?;
+            let manifest = distributable.manifest(self.baserom_path())?;
+            let package_id = manifest.metadata().id().to_string();
+            let package = distributable.open_to_dir(super::distribute::OpenOptions {
+                output: Some(dependencies_dir.join(package_id)),
+                baserom: self.baserom_path(),
+            })?;
+            self.registry.register(package)?
+        } else {
+            bail!("not a package directory or distributable file: {}", path.display());
+        };
+        let dependency: Dependency = self.registry.get_or_error(id)?.try_into()?;
+        self.package().edit_manifest(move |manifest| {
+            manifest.declare_direct_dependency(dependency)
+        })?;
+        Ok(id)
     }
 
     fn git_create_branch(&self, branch_name: &str) -> Result<()> {
@@ -399,6 +558,32 @@ impl InitialisedPackage {
         Ok(())
     }
 
+    fn git_branch_exists(&self, branch_name: &str) -> Result<bool> {
+        let output = Command::new("git")
+            .arg("branch")
+            .arg("--list")
+            .arg(&branch_name)
+            .current_dir(self.subrepo_path())
+            .output()?;
+        if !output.status.success() {
+            bail!("failed to run git branch --list {}", branch_name);
+        }
+        Ok(!output.stdout.is_empty())
+    }
+
+    fn git_delete_branch(&self, branch_name: &str) -> Result<()> {
+        let status = Command::new("git")
+            .arg("branch")
+            .arg("-D")
+            .arg(&branch_name)
+            .current_dir(self.subrepo_path())
+            .status()?;
+        if !status.success() {
+            bail!("failed to run git branch -D {}", branch_name);
+        }
+        Ok(())
+    }
+
     /// Stashes if needed, switches to the main branch, pulls, then switches back, merges, and pops stash.
     /// Also updates the decomp dependency in the package manifest to the main's HEAD commit.
     pub fn update_decomp(&self) -> Result<()> {
@@ -430,6 +615,7 @@ impl InitialisedPackage {
             self.git_checkout_branch(&prev_branch)?;
 
             // Merge main into package branch
+            // TODO: and/or sync_to_repo?
             let status = Command::new("git")
                 .arg("merge")
                 .arg(main_branch)
