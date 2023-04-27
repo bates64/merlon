@@ -161,7 +161,7 @@ impl Args {
                     // If the package is initialised, sync it so the patches dir updates
                     if InitialisedPackage::is_initialised(&package)? {
                         let initialised = InitialisedPackage::try_from(package.clone())?;
-                        initialised.sync_repo()?;
+                        initialised.setup_git_branches()?;
                     }
 
                     let exported = package.export_distributable(export_args)?;
@@ -214,7 +214,7 @@ impl Args {
                 if let Some(package) = package {
                     let initialised: InitialisedPackage = package.try_into()?;
                     initialised.update_decomp()?;
-                    initialised.sync_repo()?;
+                    initialised.setup_git_branches()?;
                     Ok(())
                 } else {
                     bail!("cannot update package: not in a package directory.");
@@ -226,7 +226,7 @@ impl Args {
                     let id = initialised.add_dependency(add_args)?;
                     let package = initialised.registry().get_or_error(id)?;
                     println!("Added dependency: {}", package);
-                    initialised.sync_repo()
+                    initialised.setup_git_branches()
                         .context("failed to sync repo, is a dependency missing?")
                 } else {
                     bail!("cannot add dependency: not in a package directory.");

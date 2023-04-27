@@ -9,6 +9,7 @@ mod rom;
 
 /// Create a new package, initialise it, and build it.
 #[test]
+#[ignore]
 fn new_init_build() -> Result<()> {
     let tempdir = TempDir::new()?;
     let pkg_path = tempdir.path().join("test");

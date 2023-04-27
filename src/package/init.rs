@@ -27,6 +27,7 @@ use std::process::{Command, Stdio};
 use std::fs::{create_dir, create_dir_all, remove_dir_all, write, copy, remove_file};
 use anyhow::{Result, Error, bail, anyhow, Context};
 use clap::Parser;
+use pretty_env_logger::env_logger::init;
 use scopeguard::defer;
 use semver::VersionReq;
 
@@ -233,7 +234,15 @@ impl InitialisedPackage {
                 manifest.upsert_decomp_dependency(main_head)
             })?;
 
-            initialised.sync_repo()?;
+            // In case there are patches in the package already, apply them
+            // i.e. sync patches ---> repo
+            let branch_name = initialised.package_id().to_string();
+            initialised.git_create_branch(&branch_name)?;
+            initialised.git_checkout_branch(&branch_name)?;
+            initialised.package().apply_patches_to_decomp_repo(&initialised.subrepo_path())?;
+
+            // Load dependency patches
+            initialised.setup_git_branches()?;
 
             Ok(initialised)
         };
@@ -285,7 +294,7 @@ impl InitialisedPackage {
     /// Each branch will have the respective package patches applied to it.
     /// 
     /// splat.yaml will be updated so that the asset_stack is correct.
-    pub fn sync_repo(&self) -> Result<()> {
+    pub fn setup_git_branches(&self) -> Result<()> {
         // Make sure commits are saved to patches/
         let package_id_string = self.package_id.to_string();
         if self.git_branch_exists(&package_id_string)? {
@@ -453,6 +462,20 @@ impl InitialisedPackage {
         if !status.success() {
             bail!("failed git format-patch");
         }
+
+        // List patches
+        let patches = std::fs::read_dir(&dir)?
+            .filter_map(|entry| {
+                let entry = entry.ok()?;
+                let path = entry.path();
+                if path.extension()? == "patch" {
+                    Some(path)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        log::info!("saved {} patches", patches.len());
 
         Ok(())
     }

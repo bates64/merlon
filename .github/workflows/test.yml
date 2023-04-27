@@ -22,12 +22,20 @@ jobs:
       run: curl -L $BASEROM_US_URL -o tests/baserom.z64
       env:
         BASEROM_US_URL: ${{ secrets.BASEROM_US_URL }}
+    
+    - name: Set git user for tests
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "merlongithubactions@nanaian.town"
 
     - name: Run tests
       uses: actions-rs/cargo@v1
       with:
         command: test
         args: --verbose --no-fail-fast
+        env:
+          RUST_BACKTRACE: full
+          RUST_LOG: debug
   lint:
     runs-on: ubuntu-latest
     steps:
