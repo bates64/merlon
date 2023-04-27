@@ -7,6 +7,10 @@ description = "Mod package manager for the Paper Mario (N64) decompilation"
 license = "MPL-2.0"
 repository = "https://github.com/nanaian/merlon"
 
+[lib]
+name = "merlon"
+crate-type = ["cdylib", "rlib"] # bin for executable, cdylib for Python, rlib for Rust
+
 [dependencies]
 anyhow = { version = "1.0.70", features = ["std"] }
 chrono = "0.4.24"
@@ -16,6 +20,7 @@ heck = "0.4.1"
 klask = { version = "1.0.0", optional = true }
 log = "0.4.17"
 pretty_env_logger = "0.4.0"
+pyo3 = { version = "0.18.3", features = ["abi3-py37"], optional = true }
 scopeguard = "1.1.0"
 semver = { version = "1.0.17", features = ["serde"] }
 serde = { version = "1.0.160", features = ["derive"] }
@@ -30,7 +35,7 @@ rand = "0.8.5"
 trycmd = "0.14.16"
 
 [features]
-default = []
+default = ["pyo3"]
 gui = ["dep:klask"]
 
 [patch.crates-io]
