@@ -2,6 +2,8 @@
 
 [![](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/test.yml?branch=main)](https://github.com/nanaian/merlon/actions)
 [![](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding-279322074412089344)
+[![](https://img.shields.io/crates/v/merlon)](https://crates.io/crates/merlon)
+[![](https://img.shields.io/pypi/v/merlon)](https://pypi.org/project/merlon/)
 
 Merlon is a mod package manager for the Paper Mario (N64) decompilation.
 
