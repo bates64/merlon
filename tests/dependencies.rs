@@ -197,12 +197,25 @@ fn initialised_patches_maintained() -> Result<()> {
     write!(&mut file, "{}", skip_intro_patch())?;
     assert!(patch_path.is_file());
 
+    // Initialise package
     let initialised = package.to_initialised(InitialiseOptions {
         baserom: rom::baserom(),
         rev: Some(DECOMP_REV.to_string()),
     })?;
     assert!(patch_path.is_file());
-    initialised.update_decomp()?;
+
+    // Assert we are on branch for package
+    let output = Command::new("git")
+        .arg("rev-parse")
+        .arg("--abbrev-ref")
+        .arg("HEAD")
+        .current_dir(initialised.subrepo_path())
+        .output()?;
+    let branch = String::from_utf8(output.stdout)?.trim().to_string();
+    assert_eq!(branch, initialised.package_id().to_string());
+
+    // Update, sync, check patch is still there
+    initialised.update_decomp()?; // XXX: brittle; will fail if patch becomes unmergeable
     assert!(patch_path.is_file());
     initialised.sync_repo()?;
     assert!(patch_path.is_file());

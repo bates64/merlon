@@ -119,6 +119,10 @@ impl InitialisedPackage {
         self.registry.get(self.package_id).expect("package somehow removed from registry")
     }
 
+    pub fn package_id(&self) -> Id {
+        self.package_id
+    }
+
     pub fn baserom_path(&self) -> PathBuf {
         self.subrepo_path().join("ver/us/baserom.z64")
     }
@@ -228,6 +232,8 @@ impl InitialisedPackage {
             initialised.package().edit_manifest(|manifest| {
                 manifest.upsert_decomp_dependency(main_head)
             })?;
+
+            initialised.sync_repo()?;
 
             Ok(initialised)
         };
@@ -409,7 +415,7 @@ impl InitialisedPackage {
                 );
         let mut diff_against = None;
         for branch in branch_order.rev() {
-            if self.git_branch_exists(&branch)? {
+            if branch != package_id_str && self.git_branch_exists(&branch)? {
                 diff_against = Some(branch);
                 break;
             }
