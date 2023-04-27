@@ -1405,7 +1405,7 @@ dependencies = [
 
 [[package]]
 name = "merlon"
-version = "1.0.2"
+version = "1.1.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1778,6 +1778,7 @@ version = "0.18.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3b1ac5b3731ba34fdaa9785f8d74d17448cd18f30cf19e0c7e7b1fdb5272109"
 dependencies = [
+ "anyhow",
  "cfg-if 1.0.0",
  "indoc",
  "libc",
@@ -1786,6 +1787,7 @@ dependencies = [
  "pyo3-build-config",
  "pyo3-ffi",
  "pyo3-macros",
+ "serde",
  "unindent",
 ]
 

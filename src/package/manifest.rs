@@ -1,12 +1,17 @@
 use std::io::prelude::*;
 use std::{fs::File, path::Path, io::{BufReader, BufWriter}};
 use anyhow::{Result, bail};
+use pyo3::exceptions::PyValueError;
+use pyo3::types::PyDict;
 use serde::{Deserialize, Serialize};
-pub use uuid::Uuid as Id; // note: implements Copy
 pub use semver::{Version, VersionReq};
+use pyo3::prelude::*;
 
 pub mod name;
 use name::Name;
+
+mod id;
+pub use id::Id;
 
 use super::Package;
 
@@ -14,6 +19,7 @@ use super::Package;
 
 /// `merlon.toml` file. This file is used to store metadata about a mod.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[pyclass]
 pub struct Manifest {
     /// Package metadata
     #[serde(rename = "package")]
@@ -24,6 +30,7 @@ pub struct Manifest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[pyclass]
 pub struct Metadata {
     id: Id,
     name: Name,
@@ -34,23 +41,30 @@ pub struct Metadata {
     keywords: Vec<String>,
 }
 
+#[pymethods]
 impl Metadata {
+    #[getter]
     pub fn id(&self) -> Id {
         self.id
     }
 
-    pub fn name(&self) -> &Name {
-        &self.name
+    #[getter]
+    fn get_name(&self) -> Name {
+        self.name.clone()
     }
 
-    pub fn version(&self) -> &Version {
-        &self.version
+    #[getter]
+    fn get_version(&self) -> String {
+        self.version.to_string()
     }
 
-    pub fn set_version(&mut self, version: Version) {
-        self.version = version;
+    #[setter(version)]
+    fn py_set_version(&mut self, version: String) -> Result<()> {
+        self.version = version.parse()?;
+        Ok(())
     }
 
+    #[getter]
     pub fn description(&self) -> &str {
         &self.description
     }
@@ -86,14 +100,34 @@ impl Metadata {
         self.validate().is_empty()
     }
 
-    pub fn print_validation_warnings(&self) {
-        for error in self.validate() {
-            eprintln!("warning: {}", error);
-        }
+    #[getter]
+    fn get_authors(&self) -> Vec<String> {
+        self.authors.clone()
+    }
+}
+
+impl Metadata {
+    pub fn name(&self) -> &Name {
+        &self.name
+    }
+
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
+
+    pub fn set_version(&mut self, version: Version) {
+        self.version = version;
     }
 
     pub fn authors(&self) -> &Vec<String> {
         &self.authors
+    }
+
+    #[deprecated(since = "1.1.0", note = "iterate over validate() instead")]
+    pub fn print_validation_warnings(&self) {
+        for error in self.validate() {
+            eprintln!("warning: {}", error);
+        }
     }
 }
 
@@ -143,11 +177,62 @@ impl TryFrom<&Package> for Dependency {
     }
 }
 
+impl ToPyObject for Dependency {
+    fn to_object(&self, py: Python<'_>) -> PyObject {
+        match self {
+            Self::Package { id, version } => {
+                let dict = PyDict::new(py);
+                dict.set_item("type", "package").unwrap();
+                dict.set_item("id", id.to_string()).unwrap();
+                dict.set_item("version", version.to_string()).unwrap();
+                dict.into()
+            }
+            Self::Decomp { rev } => {
+                let dict = PyDict::new(py);
+                dict.set_item("type", "decomp").unwrap();
+                dict.set_item("rev", rev).unwrap();
+                dict.into()
+            }
+        }
+    }
+}
+
+impl FromPyObject<'_> for Dependency {
+    fn extract(ob: &PyAny) -> PyResult<Self> {
+        let dict = ob.downcast::<PyDict>()?;
+        let type_: &str = dict.get_item("type")
+            .ok_or(PyValueError::new_err("missing dependency type"))?
+            .extract()?;
+        match type_ {
+            "package" => {
+                let id: Id = dict.get_item("id")
+                    .ok_or(PyValueError::new_err("missing dependency id"))?
+                    .extract()?;
+                let version: String = dict.get_item("version")
+                    .ok_or(PyValueError::new_err("missing dependency version"))?
+                    .extract()?;
+                let version: VersionReq = version.parse()
+                    .map_err(|e| PyValueError::new_err(format!("invalid dependency version: {}", e)))?;
+                Ok(Self::Package { id, version })
+            }
+            "decomp" => {
+                let rev: String = dict.get_item("rev")
+                    .ok_or(PyValueError::new_err("missing dependency rev"))?
+                    .extract()?;
+                Ok(Self::Decomp { rev })
+            }
+            _ => Err(PyValueError::new_err(format!("invalid dependency type: {}", type_))),
+        }
+    }
+}
+
+#[pymethods]
 impl Manifest {
+    #[new]
     pub fn new(name: Name) -> Result<Self> {
         Ok(Self {
             metadata: Metadata {
-                id: Id::new_v4(),
+                id: Id::new(),
                 name,
                 version: "0.1.0".parse()?,
                 authors: vec![get_author()?],
@@ -159,6 +244,18 @@ impl Manifest {
         })
     }
 
+    #[getter]
+    fn get_metadata(&self) -> Metadata {
+        self.metadata.clone()
+    }
+
+    #[setter]
+    pub fn set_metadata(&mut self, metadata: Metadata) {
+        self.metadata = metadata;
+    }
+}
+
+impl Manifest {
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }

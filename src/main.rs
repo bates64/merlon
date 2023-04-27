@@ -136,7 +136,9 @@ impl Args {
         };
 
         if let Some(package) = &mut package {
-            package.manifest()?.metadata().print_validation_warnings();
+            for warning in package.manifest()?.metadata().validate() {
+                eprintln!("warning: {}", warning);
+            }
         }
 
         // Run subcommand.

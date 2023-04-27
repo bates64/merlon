@@ -16,6 +16,7 @@ Features:
 - [x] Run modded ROM in an emulator (`merlon run`)
 - [x] Package dependency management (`merlon add`)
 - [x] Experimental GUI support (`merlon gui` when built with `--features gui`)
+- [x] Experimental Python API (`pip install merlon`)
 
 ## Installation
 

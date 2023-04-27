@@ -16,6 +16,7 @@ use std::{
     io::prelude::*,
 };
 use anyhow::{Result, bail};
+use pyo3::prelude::*;
 
 pub mod manifest;
 pub use manifest::{
@@ -39,6 +40,7 @@ pub fn is_unexported_package(path: &Path) -> bool {
 
 /// A package in the form of a directory.
 #[derive(Debug, Clone)]
+#[pyclass]
 pub struct Package {
     path: PathBuf,
 }
@@ -92,7 +94,26 @@ impl Package {
         }
     }
 
+    pub fn edit_manifest<F>(&self, f: F) -> Result<()>
+    where
+        F: FnOnce(&mut Manifest) -> Result<()>,
+    {
+        let path = self.path.join(MANIFEST_FILE_NAME);
+        let mut manifest = self.manifest()?;
+        f(&mut manifest)?;
+        manifest.write_to_file(&path)
+    }
+}
+
+#[pymethods]
+impl Package {
+    #[new]
+    fn py_new(name: Name, path: PathBuf) -> Result<Self> {
+        Self::new(name, path)
+    }
+
     /// Gets the current package, if any, by looking for `merlon.toml` in the current directory and its parents.
+    #[staticmethod]
     pub fn current() -> Result<Option<Self>> {
         let mut dir = std::env::current_dir()?;
         while !dir.join(MANIFEST_FILE_NAME).is_file() {
@@ -115,6 +136,7 @@ impl Package {
         fs::read_to_string(self.path.join(README_FILE_NAME)).map_err(Into::into)
     }
 
+    #[getter]
     pub fn manifest(&self) -> Result<Manifest> {
         let path = self.path.join(MANIFEST_FILE_NAME);
         Manifest::read_from_path(&path)
@@ -124,16 +146,19 @@ impl Package {
             )))
     }
 
-    pub fn edit_manifest<F>(&self, f: F) -> Result<()>
-    where
-        F: FnOnce(&mut Manifest) -> Result<()>,
-    {
-        let path = self.path.join(MANIFEST_FILE_NAME);
-        let mut manifest = self.manifest()?;
-        f(&mut manifest)?;
-        manifest.write_to_file(&path)
+    pub fn uuid_equals(&self, other: &Package) -> Result<bool> {
+        Ok(self.manifest()?.metadata().id() == other.manifest()?.metadata().id())
     }
 
+    pub fn copyright_notice(&self) -> Result<String> {
+        let mut notice = String::new();
+        let mut file = fs::File::open(self.path.join(LICENSE_FILE_NAME))?;
+        file.read_to_string(&mut notice)?;
+        Ok(notice)
+    }
+}
+
+impl Package {
     pub(crate) fn apply_patches_to_decomp_repo(&self, repo: &Path) -> Result<()> {
         let mut patch_files = fs::read_dir(&self.path.join(PATCHES_DIR_NAME))?
             .map(|entry| entry.unwrap().path())
@@ -155,17 +180,6 @@ impl Package {
             bail!("failed to cleanly apply patches - run `cd papermario && git am --abort` to abort the merge");
         }
         Ok(())
-    }
-
-    pub fn uuid_equals(&self, other: &Package) -> Result<bool> {
-        Ok(self.manifest()?.metadata().id() == other.manifest()?.metadata().id())
-    }
-
-    pub fn copyright_notice(&self) -> Result<String> {
-        let mut notice = String::new();
-        let mut file = fs::File::open(self.path.join(LICENSE_FILE_NAME))?;
-        file.read_to_string(&mut notice)?;
-        Ok(notice)
     }
 
     /// Copies the package to the given path and updates. The path must not exist.
