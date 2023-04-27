@@ -27,7 +27,6 @@ use std::process::{Command, Stdio};
 use std::fs::{create_dir, create_dir_all, remove_dir_all, write, copy, remove_file};
 use anyhow::{Result, Error, bail, anyhow, Context};
 use clap::Parser;
-use pretty_env_logger::env_logger::init;
 use scopeguard::defer;
 use semver::VersionReq;
 
