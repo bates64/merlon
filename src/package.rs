@@ -169,6 +169,10 @@ impl Package {
         file.read_to_string(&mut notice)?;
         Ok(notice)
     }
+
+    fn __str__(&self) -> String {
+        format!("{}", self)
+    }
 }
 
 impl Package {
