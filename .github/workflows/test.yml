@@ -33,9 +33,9 @@ jobs:
       with:
         command: test
         args: --verbose --no-fail-fast
-        env:
-          RUST_BACKTRACE: full
-          RUST_LOG: debug
+      env:
+        RUST_BACKTRACE: full
+        RUST_LOG: debug
   lint:
     runs-on: ubuntu-latest
     steps:
