@@ -1,3 +1,4 @@
+//! Utilities for interfacing with N64 emulators.
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -5,6 +6,7 @@ use anyhow::{Result, bail};
 
 use crate::rom::Rom;
 
+/// Runs the given ROM in an emulator.
 pub fn run_rom(rom: &Rom) -> Result<std::process::ExitStatus> {
     let emulator = find_emulator()?;
     Command::new(emulator)

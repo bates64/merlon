@@ -42,6 +42,7 @@ pub struct Distributable {
     path: PathBuf,
 }
 
+/// Options for [`Package::export_distributable`].
 #[derive(Parser, Debug)]
 pub struct ExportOptions {
     /// The output path to write the distributable to.
@@ -58,16 +59,19 @@ pub struct ExportOptions {
     pub baserom: Option<PathBuf>,
 }
 
+/// Options for [`Distributable::apply`].
 #[derive(Parser, Debug)]
 pub struct ApplyOptions {
     /// The base ROM path.
     #[arg(long)]
     pub baserom: PathBuf,
 
+    /// Options to build the ROM with.
     #[clap(flatten)]
     pub build_rom_options: BuildRomOptions,
 }
 
+/// Options for [`Distributable::open_to_dir`].
 #[derive(Parser, Debug)]
 pub struct OpenOptions {
     /// The output directory to write the package source code to.
@@ -83,6 +87,7 @@ pub struct OpenOptions {
 }
 
 impl Package {
+    /// Exports the package as a distributable `.merlon` file.
     pub fn export_distributable(&self, options: ExportOptions) -> Result<Distributable> {
         let baserom_path = match options.baserom {
             Some(baserom) => baserom,
@@ -268,6 +273,7 @@ impl Distributable {
         f(package)
     }
 
+    /// Returns the path to the distributable.
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -293,6 +299,7 @@ impl Distributable {
         })
     }
 
+    /// Opens the distributable into a temporary directory and reads the package manifest. 
     pub fn manifest(&self, baserom: PathBuf) -> Result<Manifest> {
         self.open_scoped(baserom, |package| {
             package.manifest()
@@ -318,6 +325,7 @@ impl fmt::Display for Distributable {
     }
 }
 
+/// Returns true if the given path is probably a distributable package.
 pub fn is_distributable_package(path: &Path) -> bool {
     path.is_file() && path.extension().unwrap_or_default() == EXTENSION
 }

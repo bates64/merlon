@@ -12,6 +12,7 @@ pub struct Registry {
 }
 
 impl Registry {
+    /// Create a new, empty registry.
     pub fn new() -> Self {
         Self {
             packages: Default::default(),
@@ -44,6 +45,7 @@ impl Registry {
         self.packages.get(&id)
     }
 
+    /// Get a package by ID, or return an error if it is not in the registry.
     pub fn get_or_error(&self, id: Id) -> Result<&Package> {
         match self.get(id) {
             Some(package) => Ok(package),
@@ -51,10 +53,12 @@ impl Registry {
         }
     }
 
+    /// Returns true if the registry contains a package with the given ID.
     pub fn has(&self, id: Id) -> bool {
         self.packages.contains_key(&id)
     }
 
+    /// Edits a package given its ID. The callback is given a mutable reference to the package.
     pub fn edit<F, T>(&mut self, id: Id, f: F) -> Result<T>
     where
         F: FnOnce(&mut Package) -> Result<T>
@@ -65,6 +69,7 @@ impl Registry {
         Ok(ret)
     }
 
+    /// Returns an iterator over IDs of the packages in the registry.
     pub fn package_ids(&self) -> impl Iterator<Item = Id> + '_ {
         self.packages.keys().copied()
     }
@@ -141,6 +146,7 @@ impl Registry {
         Ok(dependencies)
     }
 
+    /// Generates a map of package IDs to their versions.
     pub fn package_version_map(&self) -> Result<HashMap<Id, Version>> {
         let mut map = HashMap::new();
         for (id, package) in self.packages.iter() {
@@ -185,6 +191,7 @@ impl Registry {
         Ok(())
     }
 
+    /// Calculates the patch order in order to build a given root package.
     pub fn calc_dependency_patch_order(&self, root: Id) -> Result<Vec<Id>> {
         // https://en.wikipedia.org/wiki/Longest_path_problem#Acyclic_graphs
 
@@ -204,6 +211,8 @@ impl Registry {
         Ok(ordering)
     }
 
+    /// Returns a topological ordering of the packages in the registry.
+    /// That is, a list of packages such that for every dependency, the dependency appears before the dependent.
     pub fn topological_ordering(&self) -> Result<Vec<Id>> {
         // https://en.wikipedia.org/wiki/Topological_sorting#Depth-first_search
         let mut topological_ordering = Vec::new();

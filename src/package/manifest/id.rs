@@ -4,10 +4,12 @@ use uuid::Uuid;
 use pyo3::{prelude::*, exceptions::PyValueError};
 use serde::{Deserialize, Serialize};
 
+/// Package ID. This is a UUID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Id(Uuid);
 
 impl Id {
+    /// Generates a new unique package ID.
     pub fn new() -> Self {
         Self(Uuid::new_v4())
     }

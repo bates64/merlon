@@ -1,3 +1,7 @@
+//! Package manifests are stored in `merlon.toml` files.
+//! 
+//! The manifest format is loosely inspired by Cargo's `Cargo.toml` format.
+
 use std::io::prelude::*;
 use std::{fs::File, path::Path, io::{BufReader, BufWriter}};
 use anyhow::{Result, bail};
@@ -7,6 +11,7 @@ use serde::{Deserialize, Serialize};
 pub use semver::{Version, VersionReq};
 use pyo3::prelude::*;
 
+/// Validated package name utilities
 pub mod name;
 use name::Name;
 
@@ -17,9 +22,9 @@ use super::Package;
 
 // TODO: use taplo instead of toml to preserve comments etc
 
-/// `merlon.toml` file. This file is used to store metadata about a mod.
+/// Package manifest data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[pyclass]
+#[pyclass(module = "merlon.package.manifest")]
 pub struct Manifest {
     /// Package metadata
     #[serde(rename = "package")]
@@ -29,8 +34,9 @@ pub struct Manifest {
     dependencies: Vec<Dependency>,
 }
 
+/// Metadata about a package. Corresponds to the `[package]` section in `merlon.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[pyclass]
+#[pyclass(module = "merlon.package.manifest")]
 pub struct Metadata {
     id: Id,
     name: Name,
@@ -43,27 +49,32 @@ pub struct Metadata {
 
 #[pymethods]
 impl Metadata {
+    /// The package ID.
     #[getter]
     pub fn id(&self) -> Id {
         self.id
     }
 
+    /// The package name.
     #[getter]
     fn get_name(&self) -> Name {
         self.name.clone()
     }
 
+    /// The package version.
     #[getter]
     fn get_version(&self) -> String {
         self.version.to_string()
     }
 
+    /// Set the package version. Must be a valid semver version (e.g. `1.0.0-rc1`).
     #[setter(version)]
     fn py_set_version(&mut self, version: String) -> Result<()> {
         self.version = version.parse()?;
         Ok(())
     }
 
+    /// The package one-line description.
     #[getter]
     pub fn description(&self) -> &str {
         &self.description
@@ -96,10 +107,12 @@ impl Metadata {
         errors
     }
 
+    /// Returns whether the package metadata is valid.
     pub fn is_valid(&self) -> bool {
         self.validate().is_empty()
     }
 
+    /// The package authors.
     #[getter]
     fn get_authors(&self) -> Vec<String> {
         self.authors.clone()
@@ -107,22 +120,27 @@ impl Metadata {
 }
 
 impl Metadata {
+    /// Returns the package name.
     pub fn name(&self) -> &Name {
         &self.name
     }
 
+    /// Returns the package version.
     pub fn version(&self) -> &Version {
         &self.version
     }
 
+    /// Updates the package version.
     pub fn set_version(&mut self, version: Version) {
         self.version = version;
     }
 
+    /// Returns the package authors.
     pub fn authors(&self) -> &Vec<String> {
         &self.authors
     }
 
+    /// Prints validation warnings to stderr.
     #[deprecated(since = "1.1.0", note = "iterate over validate() instead")]
     pub fn print_validation_warnings(&self) {
         for error in self.validate() {
@@ -131,13 +149,18 @@ impl Metadata {
     }
 }
 
+/// A dependency description. Corresponds to values of the `[[dependencies]]` list in `merlon.toml`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum Dependency {
     /// Dependency on another Merlon package.
     Package {
+        /// The ID of the dependency package.
         id: Id,
+
+        /// The semantic version requirement for the dependency.
+        /// See https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
         version: VersionReq,
     },
     /// Dependency on the Paper Mario decompilation.
@@ -228,6 +251,7 @@ impl FromPyObject<'_> for Dependency {
 
 #[pymethods]
 impl Manifest {
+    /// Creates a new manifest for a package with the given name.
     #[new]
     pub fn new(name: Name) -> Result<Self> {
         Ok(Self {
@@ -244,11 +268,13 @@ impl Manifest {
         })
     }
 
+    /// Package metadata.
     #[getter]
     fn get_metadata(&self) -> Metadata {
         self.metadata.clone()
     }
 
+    /// Updates the package metadata.
     #[setter]
     pub fn set_metadata(&mut self, metadata: Metadata) {
         self.metadata = metadata;
@@ -256,14 +282,17 @@ impl Manifest {
 }
 
 impl Manifest {
+    /// Borrows the package metadata.
     pub fn metadata(&self) -> &Metadata {
         &self.metadata
     }
 
+    /// Mutably borrows the package metadata.
     pub fn metadata_mut(&mut self) -> &mut Metadata {
         &mut self.metadata
     }
 
+    /// Reads a manifest from a file. Typically, manifest files are named `merlon.toml`.
     pub fn read_from_path(path: &Path) -> Result<Self> {
         let file = File::open(path)?;
         let mut reader = BufReader::new(file);
@@ -273,6 +302,7 @@ impl Manifest {
         Ok(config)
     }
 
+    /// Writes a manifest to a file.
     pub fn write_to_file(&self, path: &Path) -> Result<()> {
         let file = File::create(path)?;
         let mut writer = BufWriter::new(file);
@@ -281,6 +311,7 @@ impl Manifest {
         Ok(())
     }
 
+    /// Adds a dependency to the manifest. Errors if the dependency already exists.
     pub fn declare_direct_dependency(&mut self, dependency: Dependency) -> Result<()> {
         match dependency {
             Dependency::Package { id, .. } => {
@@ -302,10 +333,12 @@ impl Manifest {
         Ok(())
     }
 
+    /// Iterates over the dependencies that are declared in the manifest.
     pub fn iter_direct_dependencies(&self) -> impl Iterator<Item = &Dependency> {
         self.dependencies.iter()
     }
 
+    /// Returns true if the manifest has a decomp-type dependency.
     pub fn has_direct_decomp_dependency(&self) -> bool {
         self.dependencies.iter().any(|dep| matches!(dep, Dependency::Decomp { .. }))
     }

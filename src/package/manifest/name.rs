@@ -4,7 +4,6 @@ use heck::AsKebabCase;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use pyo3::prelude::*;
-use pyo3::create_exception;
 
 /// A validated package name.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,20 +13,30 @@ pub struct Name(String);
 /// Errors that can occur when validating a package name.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Package name is empty.
     #[error("package name cannot be empty")]
     Empty,
+
+    /// Package name contains a forward slash.
     #[error("package name cannot contain '/'")]
     ContainsSlash,
+
+    /// Package name is multiple lines (contains a newline character).
     #[error("package name must be single line")]
     ContainsNewline,
 }
 
-create_exception!(merlon, NameError, pyo3::exceptions::PyValueError);
+mod python_exception {
+    #![allow(missing_docs)]
+    pyo3::create_exception!(merlon, NameError, pyo3::exceptions::PyValueError);
+}
 
+/// Package validation result type alias.
 pub type Result<T> = std::result::Result<T, Error>;
 
-// Trait alias for TryInto<Name, Error = Error>
+/// Trait alias for TryInto<Name, Error = Error>
 pub trait TryIntoName {
+    /// Try to convert into a package name.
     fn try_into_name(self) -> Result<Name>;
 }
 
@@ -44,6 +53,7 @@ impl TryIntoName for Name {
 }
 
 impl Name {
+    /// Creates a new name from a string.
     pub fn new(name: String) -> Result<Self> {
         if name.is_empty() { 
             return Err(Error::Empty);
@@ -57,6 +67,7 @@ impl Name {
         Ok(Self(name))
     }
 
+    /// Returns the name as kebab-case.
     pub fn as_kebab_case(&self) -> String {
         format!("{}", AsKebabCase(&self.0))
     }
@@ -92,7 +103,7 @@ impl TryFrom<&str> for Name {
 impl FromPyObject<'_> for Name {
     fn extract(ob: &PyAny) -> PyResult<Self> {
         let s: String = ob.extract()?;
-        Self::new(s).map_err(|e| NameError::new_err(e.to_string()))
+        Self::new(s).map_err(|e| python_exception::NameError::new_err(e.to_string()))
     }
 }
 

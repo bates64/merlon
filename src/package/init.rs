@@ -40,12 +40,14 @@ const SUBREPO_DIR_NAME: &str = "papermario";
 const VSCODE_DIR_NAME: &str = ".vscode";
 const GITIGNORE_FILE_NAME: &str = ".gitignore";
 
+/// An initialised package. Initialised packages are ready to be built.
 #[derive(Debug)]
 pub struct InitialisedPackage {
     registry: Registry,
     package_id: Id,
 }
 
+/// Options for [`InitialisedPackage::initialise`].
 #[derive(Parser, Debug)]
 pub struct InitialiseOptions {
     /// Path to an unmodified US-release Paper Mario (N64) ROM.
@@ -59,6 +61,7 @@ pub struct InitialiseOptions {
     pub rev: Option<String>,   
 }
 
+/// Options for [`InitialisedPackage::build_rom`].
 #[derive(Parser, Debug, Default)]
 pub struct BuildRomOptions {
     /// Whether to skip configuring (useful if you've already configured).
@@ -76,6 +79,7 @@ pub struct BuildRomOptions {
     pub clean: bool,
 }
 
+/// Options for [`InitialisedPackage::add_dependency`].
 #[derive(Parser, Debug)]
 pub struct AddDependencyOptions {
     /// Path to the package to add as a dependency.
@@ -95,6 +99,7 @@ impl Package {
 }
 
 impl InitialisedPackage {
+    /// If the given package is initialised, returns it as an [`InitialisedPackage`].
     pub fn from_initialised(package: Package) -> Result<Self> {
         if !Self::is_initialised(&package)? {
             bail!("package is not initialised");
@@ -121,30 +126,38 @@ impl InitialisedPackage {
         })
     }
 
+    /// The package that this InitialisedPackage was created from.
     pub fn package(&self) -> &Package {
         self.registry.get(self.package_id).expect("package somehow removed from registry")
     }
 
+    /// The package ID.
     pub fn package_id(&self) -> Id {
         self.package_id
     }
 
+    /// The path to base ROM.
     pub fn baserom_path(&self) -> PathBuf {
         self.subrepo_path().join("ver/us/baserom.z64")
     }
 
+    /// The path to the papermario repository used to build this package.
     pub fn subrepo_path(&self) -> PathBuf {
         self.package().path().join(SUBREPO_DIR_NAME)
     }
 
+    /// The registry of packages. Includes dependencies of the package.
     pub fn registry(&self) -> &Registry {
         &self.registry
     }
 
+    /// Updates the registry.
     pub fn set_registry(&mut self, registry: Registry) {
         self.registry = registry;
     }
 
+    /// Initialises a package. Errors if it is already initialised.
+    /// This will clone the papermario repository, and create the .merlon directory.
     pub fn initialise(package: Package, options: InitialiseOptions) -> Result<Self> {
         if Self::is_initialised(&package)? {
             bail!("package is already initialised");
@@ -264,7 +277,7 @@ impl InitialisedPackage {
         }
     }
 
-    // TODO: move to impl Package
+    /// Checks whether a package is initialised.
     pub fn is_initialised(package: &Package) -> Result<bool> {
         let path = package.path();
 

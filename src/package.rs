@@ -1,3 +1,5 @@
+//! Merlon package management.
+
 /// Versioned root directory name. Can bump this if we ever need to change the directory structure.
 const ROOT_DIR_NAME: &str = "merlon_v1";
 
@@ -34,13 +36,14 @@ pub use init::InitialisedPackage;
 pub mod distribute;
 pub use distribute::Distributable;
 
+/// Returns true if the given directory is probably a Merlon package.
 pub fn is_unexported_package(path: &Path) -> bool {
     path.is_dir() && path.join(MANIFEST_FILE_NAME).is_file()
 }
 
 /// A package in the form of a directory.
 #[derive(Debug, Clone)]
-#[pyclass]
+#[pyclass(module = "merlon.package")]
 pub struct Package {
     path: PathBuf,
 }
@@ -94,6 +97,8 @@ impl Package {
         }
     }
 
+    /// Edit the package manifest. The given function will be called with a mutable reference to the manifest,
+    /// and after the function returns the manifest will be written back to disk.
     pub fn edit_manifest<F>(&self, f: F) -> Result<()>
     where
         F: FnOnce(&mut Manifest) -> Result<()>,
@@ -107,6 +112,7 @@ impl Package {
 
 #[pymethods]
 impl Package {
+    /// Creates a new package at the given path. The path must not exist.
     #[new]
     fn py_new(name: Name, path: PathBuf) -> Result<Self> {
         Self::new(name, path)
@@ -124,19 +130,24 @@ impl Package {
         Self::try_from(dir).map(|pkg| Some(pkg))
     }
 
+    /// The package ID.
+    #[getter]
     pub fn id(&self) -> Result<Id> {
         Ok(self.manifest()?.metadata().id().clone())
     }
 
+    /// The package path.
+    #[getter]
     pub fn path(&self) -> &Path {
         &self.path
     }
 
+    /// Returns the text content of the README.md file in the package.
     pub fn readme(&self) -> Result<String> {
         fs::read_to_string(self.path.join(README_FILE_NAME)).map_err(Into::into)
     }
 
-    #[getter]
+    /// Returns the manifest of the package by parsing the `merlon.toml` file.
     pub fn manifest(&self) -> Result<Manifest> {
         let path = self.path.join(MANIFEST_FILE_NAME);
         Manifest::read_from_path(&path)
@@ -146,10 +157,12 @@ impl Package {
             )))
     }
 
+    /// Compares two packages by ID.
     pub fn uuid_equals(&self, other: &Package) -> Result<bool> {
         Ok(self.manifest()?.metadata().id() == other.manifest()?.metadata().id())
     }
 
+    /// Returns a copyright notice for this package by reading the package's `LICENSE` file.
     pub fn copyright_notice(&self) -> Result<String> {
         let mut notice = String::new();
         let mut file = fs::File::open(self.path.join(LICENSE_FILE_NAME))?;
