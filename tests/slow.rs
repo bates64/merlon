@@ -18,10 +18,7 @@ fn new_init_build() -> Result<()> {
         baserom: rom::baserom(),
         rev: Some(DECOMP_REV.to_string()),
     })?;
-    let rom = initialised.build_rom(BuildRomOptions {
-        output: None,
-        skip_configure: false,
-    })?;
+    let rom = initialised.build_rom(BuildRomOptions::default())?;
     assert_eq!(rom.sha1_string()?, "e1f9c77fa35549897ace8b8627e821a27309d538");
     Ok(())
 }

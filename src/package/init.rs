@@ -59,7 +59,7 @@ pub struct InitialiseOptions {
     pub rev: Option<String>,   
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Default)]
 pub struct BuildRomOptions {
     /// Whether to skip configuring (useful if you've already configured).
     #[arg(long)]
@@ -68,6 +68,12 @@ pub struct BuildRomOptions {
     /// Path to output ROM to.
     #[arg(short, long)]
     pub output: Option<PathBuf>,
+
+    /// Whether to clean the build directory and build from scratch.
+    ///
+    /// Will also re-split assets.
+    #[arg(long)]
+    pub clean: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -365,11 +371,16 @@ impl InitialisedPackage {
         // Configure
         // TODO: only do this if we have to (i.e. file tree changed) - maybe ask git?
         if !options.skip_configure {
-            let status = Command::new("./configure")
+            let mut command = Command::new("./configure");
+            command
                 //.arg("--non-matching")
                 //.arg("--debug")
                 .arg("--shift")
-                .arg("us")
+                .arg("us");
+            if options.clean {
+                command.arg("--clean");
+            }
+            let status = command
                 .current_dir(&dir)
                 .status()?;
             if !status.success() {

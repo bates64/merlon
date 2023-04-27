@@ -60,15 +60,12 @@ pub struct ExportOptions {
 
 #[derive(Parser, Debug)]
 pub struct ApplyOptions {
-    /// The output path to write the patched ROM to.
-    ///
-    /// If not specified, the package name and version will be used.
-    #[arg(short, long)]
-    pub output: Option<PathBuf>,
-
     /// The base ROM path.
     #[arg(long)]
     pub baserom: PathBuf,
+
+    #[clap(flatten)]
+    pub build_rom_options: BuildRomOptions,
 }
 
 #[derive(Parser, Debug)]
@@ -276,24 +273,23 @@ impl Distributable {
     }
 
     /// Applies the distributable to a base ROM, and returns the output ROM.
-    pub fn apply(&self, options: ApplyOptions) -> Result<Rom> {
+    pub fn apply(&self, mut options: ApplyOptions) -> Result<Rom> {
         self.open_scoped(options.baserom.clone(), |package| {
-            let output_path = match options.output {
-                Some(path) => path,
-                None => {
-                    let manifest = package.manifest()?;
-                    let metadata = manifest.metadata();
-                    PathBuf::from(format!("{} {}.z64", metadata.name(), metadata.version()))
-                }
-            };
             let initialised = package.to_initialised(InitialiseOptions {
                 baserom: options.baserom,
                 rev: None,
             })?;
-            initialised.build_rom(BuildRomOptions {
-                output: Some(output_path),
-                skip_configure: false,
-            })
+
+            // Default output path - since we're using a open_scoped tempdir, we need to set output to Some because
+            // if it is None the output ROM will be in the tempdir and will be thrown away.
+            if options.build_rom_options.output.is_none() {
+                let manifest = initialised.package().manifest()?;
+                let metadata = manifest.metadata();
+                let output_path = PathBuf::from(format!("{} {}.z64", metadata.name(), metadata.version()));
+                options.build_rom_options.output = Some(output_path)
+            }
+
+            initialised.build_rom(options.build_rom_options)
         })
     }
 
