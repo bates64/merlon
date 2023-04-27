@@ -183,3 +183,39 @@ fn skip_intro_patch() -> &'static str {
         )
     )
 }
+
+#[test]
+fn initialised_patches_maintained() -> Result<()> {
+    let tempdir = TempDir::new()?;
+
+    let package = Package::new("Package", tempdir.path().join("package"))?;
+    let patch_path = package.path().join("patches/0001-skip-intro-patch.patch");
+
+    assert!(!patch_path.is_file());
+
+    let mut file = File::create(&patch_path)?;
+    write!(&mut file, "{}", skip_intro_patch())?;
+    assert!(patch_path.is_file());
+
+    let initialised = package.to_initialised(InitialiseOptions {
+        baserom: rom::baserom(),
+        rev: Some(DECOMP_REV.to_string()),
+    })?;
+    assert!(patch_path.is_file());
+    initialised.update_decomp()?;
+    assert!(patch_path.is_file());
+    initialised.sync_repo()?;
+    assert!(patch_path.is_file());
+
+    // Assert patch is applied to repo
+    let output = Command::new("git")
+        .arg("log")
+        .arg("-1")
+        .arg("--pretty=format:%s")
+        .current_dir(initialised.subrepo_path())
+        .output()?;
+    let head_commit = String::from_utf8(output.stdout)?.trim().to_string();
+    assert_eq!(&head_commit, "set bSkipIntro to true");
+
+    Ok(())
+}

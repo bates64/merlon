@@ -280,10 +280,10 @@ impl InitialisedPackage {
     /// 
     /// splat.yaml will be updated so that the asset_stack is correct.
     pub fn sync_repo(&self) -> Result<()> {
-        // Make sure commits are backed up
+        // Make sure commits are saved to patches/
         let package_id_string = self.package_id.to_string();
         if self.git_branch_exists(&package_id_string)? {
-            log::info!("backing up commits to patches directory");
+            log::info!("updating patches directory");
             self.update_patches_dir()
                 .context("failed to update patches dir for backup")?;
         }
@@ -340,10 +340,6 @@ impl InitialisedPackage {
         // Update splat.yaml with dependencies
         // TODO
         // TODO: also need to figure out whether to store splat.yaml in patches/ or not - probably not, but need merge strategy
-
-        log::info!("updating patches directory");
-        self.update_patches_dir()
-            .context("failed to update patches dir")?;
 
         Ok(())
     }
