@@ -204,7 +204,7 @@ impl Args {
                     let rom = initialised.build_rom(build_args)?;
                     println!("Built: {}", rom);
                     println!("You can run this ROM with `merlon run`.");
-                    println!("Warning: do not distribute this ROM. To distribute mods, use `merlon pack`.");
+                    println!("Warning: do not distribute this ROM. To distribute this package, use `merlon export`.");
                     Ok(())
                 } else {
                     bail!("cannot build package: not in a package directory.");
