@@ -222,6 +222,13 @@ impl InitialisedPackage {
             }
 
             let initialised = Self::from_initialised(package)?;
+
+            // Add decomp as dependency
+            let main_head = initialised.git_head_commit()?;
+            initialised.package().edit_manifest(|manifest| {
+                manifest.upsert_decomp_dependency(main_head)
+            })?;
+
             Ok(initialised)
         };
         match do_it() {
