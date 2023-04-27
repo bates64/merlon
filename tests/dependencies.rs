@@ -80,10 +80,9 @@ fn sync_complex_dependency_graph_to_repo() -> Result<()> {
         .map(|e| Ok(e?.file_name()))
         .collect::<Result<Vec<_>>>()?
     );
-    assert_eq!(root_patches.read_dir()?.count(), 1); // FIXME
+    assert_eq!(root_patches.read_dir()?.count(), 1);
 
     // If the patches applied correctly, all the test files should have been made
-    // FIXME
     assert!(initialised.subrepo_path().join("src/merlon_test_Root.c").is_file());
     assert!(initialised.subrepo_path().join("src/merlon_test_DepA.c").is_file());
     assert!(initialised.subrepo_path().join("src/merlon_test_DepB.c").is_file());

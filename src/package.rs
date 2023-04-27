@@ -138,7 +138,8 @@ impl Package {
         let mut patch_files = fs::read_dir(&self.path.join(PATCHES_DIR_NAME))?
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.extension().map(|ext| ext == "patch").unwrap_or(false))
-            .collect::<Vec<_>>();
+            .map(|path| path.canonicalize())
+            .collect::<Result<Vec<_>, _>>()?;
         patch_files.sort_unstable();
         if patch_files.is_empty() {
             return Ok(())
