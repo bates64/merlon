@@ -1,0 +1,79 @@
+From 0881bb0eb6b2d17c7bcaf3638f2d0aed134ef3b0 Mon Sep 17 00:00:00 2001
+From: Alex Bates <alex@nanaian.town>
+Date: Thu, 27 Apr 2023 08:30:24 +0100
+Subject: set bSkipIntro to true
+
+---
+ src/state_logos.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/state_logos.c b/src/state_logos.c
+index 92188e0..53d85d1 100644
+--- a/src/state_logos.c
++++ b/src/state_logos.c
+@@ -49,61 +49,61 @@ extern u8* gLogosImage2;
+ void state_init_logos(void) {
+     s8* romStart;
+     s8* romEnd;
+ 
+     general_heap_create();
+     gGameStatusPtr->introState = INTRO_STATE_0;
+     gGameStatusPtr->introCounter = 0;
+-    gGameStatusPtr->bSkipIntro = FALSE;
++    gGameStatusPtr->bSkipIntro = TRUE;
+     intro_logos_set_fade_alpha(255);
+     intro_logos_set_fade_color(0);
+ 
+     romEnd = logos_ROM_END;
+     romStart = logos_ROM_START;
+     gLogosImages = heap_malloc(romEnd - romStart);
+     dma_copy(romStart, romEnd, gLogosImages);
+ 
+     gLogosImage1 = gLogosImages + 0x0;
+     gLogosImage3 = gLogosImages + 0x7000;
+     gLogosImage2 = gLogosImages + 0x15000;
+ 
+     nuContRmbForceStop();
+     create_cameras_a();
+     gCameras[CAM_DEFAULT].updateMode = CAM_UPDATE_MODE_6;
+     gCameras[CAM_DEFAULT].needsInit = TRUE;
+     gCameras[CAM_DEFAULT].nearClip = 16;
+     gCameras[CAM_DEFAULT].farClip = 4096;
+     gCurrentCameraID = CAM_DEFAULT;
+     gCameras[CAM_DEFAULT].vfov = 25.0f;
+     gCameras[CAM_DEFAULT].flags |= CAMERA_FLAG_DISABLED;
+     gCameras[CAM_BATTLE].flags |= CAMERA_FLAG_DISABLED;
+     gCameras[CAM_TATTLE].flags |= CAMERA_FLAG_DISABLED;
+     gCameras[CAM_3].flags |= CAMERA_FLAG_DISABLED;
+     set_cam_viewport(0, 12, 28, 296, 184);
+     gCameras[CAM_DEFAULT].auxBoomLength = 40;
+     gCameras[CAM_DEFAULT].bgColor[0] = 0;
+     gCameras[CAM_DEFAULT].bgColor[1] = 0;
+     gCameras[CAM_DEFAULT].bgColor[2] = 0;
+     gCameras[CAM_DEFAULT].lookAt_obj_target.x = 25.0f;
+     gCameras[CAM_DEFAULT].lookAt_obj_target.y = 25.0f;
+     gCameras[CAM_DEFAULT].auxPitch = 0;
+     gCameras[CAM_DEFAULT].lookAt_dist = 100;
+     gCameras[CAM_DEFAULT].auxBoomPitch = 0;
+     gCameras[CAM_DEFAULT].lookAt_eye.x = 500.0f;
+     gCameras[CAM_DEFAULT].lookAt_eye.y = 1000.0f;
+     gCameras[CAM_DEFAULT].lookAt_eye.z = 1500.0f;
+     gCameras[CAM_DEFAULT].lookAt_obj_target.z = 150.0f;
+     clear_script_list();
+     clear_worker_list();
+     clear_render_tasks();
+     spr_init_sprites(PLAYER_SPRITES_MARIO_WORLD);
+     clear_animator_list();
+     clear_entity_models();
+     clear_npcs();
+     hud_element_clear_cache();
+     reset_background_settings();
+     clear_entity_data(1);
+     clear_effect_data();
+     gOverrideFlags |= GLOBAL_OVERRIDES_DISABLE_RENDER_WORLD;
+     intro_logos_update_fade();
+     gGameStatusPtr->backgroundFlags = 0;
+ }
+-- 
+2.39.0
+

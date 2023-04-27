@@ -1,8 +1,9 @@
+use std::process::Command;
 use std::io::prelude::*;
 use std::fs::File;
 use temp_dir::TempDir;
 use anyhow::Result;
-use merlon::package::{*, init::*, manifest::*};
+use merlon::package::{*, init::*, manifest::*, distribute::ExportOptions};
 
 /// Pinned decomp commit hash so that tests don't break when decomp updates
 const DECOMP_REV: &str = "7a9df943ad079e7b19df0f8690bdc92e2beed964";
@@ -119,4 +120,66 @@ new file mode 100644
 index 0000000..e69de29
 -- 
 2.39.0"#)
+}
+
+#[test]
+fn single_dependency() -> Result<()> {
+    let tempdir = TempDir::new()?;
+
+    // Root package with no commits
+    let root = Package::new("Root", tempdir.path().join("root"))?;
+    let mut root = root.to_initialised(InitialiseOptions {
+        baserom: rom::baserom(),
+        rev: Some(DECOMP_REV.to_string()),
+    })?;
+
+    // Dependency package with single commit
+    let dependency = Package::new("Dependency", tempdir.path().join("dependency"))?;
+    let mut file = File::create(dependency.path().join("patches/0001-skip-intro-patch.patch"))?;
+    write!(&mut file, "{}", skip_intro_patch())?;
+
+    // Add dependency, sync repo, check skip intro commit was added
+    root.add_dependency(AddDependencyOptions {
+        path: dependency.path().to_path_buf(),
+    })?;
+    root.sync_repo()?;
+    let output = Command::new("git")
+        .arg("log")
+        .arg("-1")
+        .arg("--pretty=format:%s")
+        .current_dir(root.subrepo_path())
+        .output()?;
+    let head_commit = String::from_utf8(output.stdout)?.trim().to_string();
+    assert_eq!(&head_commit, "set bSkipIntro to true");
+
+    // Export root and make some assertions
+    let distributable = root.package().export_distributable(ExportOptions {
+        baserom: Some(rom::baserom()),
+        output: Some(tempdir.path().join("output.merlon")),
+    })?;
+    distributable.open_scoped(rom::baserom(), |package| {
+        let manifest = package.manifest()?;
+
+        // Should have 2 dependencies: decomp & dependency
+        assert_eq!(manifest.iter_direct_dependencies().count(), 2);
+
+        // Should have no patches (only dependency has patches)
+        let patches_count = package.path().join("patches")
+            .read_dir()?
+            .count();
+        assert_eq!(patches_count, 0);
+
+        Ok(())
+    })?;
+
+    Ok(())
+}
+
+fn skip_intro_patch() -> &'static str {
+    include_str!(
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/dependencies/skip_intro_patch.patch"
+        )
+    )
 }

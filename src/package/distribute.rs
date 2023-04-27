@@ -49,13 +49,13 @@ pub struct ExportOptions {
     /// If not specified, the default is `NAME VERSION.merlon`, where `NAME` is the name of the package
     /// and `VERSION` is the package version as specified in `merlon.toml`.
     #[arg(short, long)]
-    output: Option<PathBuf>,
+    pub output: Option<PathBuf>,
 
     /// The base ROM to use as the encryption key.
     ///
     /// If not specified and the package is initialised, `papermario/ver/us/baserom.z64` will be used.
     #[arg(long)]
-    baserom: Option<PathBuf>,
+    pub baserom: Option<PathBuf>,
 }
 
 #[derive(Parser, Debug)]
