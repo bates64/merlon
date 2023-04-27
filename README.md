@@ -77,6 +77,8 @@ $ merlon export
 $ merlon apply "My mod 0.1.0.merlon"
 ```
 
+Example mods can be found at [nanaian/pm-mods](https://github.com/nanaian/pm-mods).
+
 ## Mod file format
 
 Merlon mods are packaged as `.merlon` files. These files are encrypted using the original game ROM, and cannot be used without the original game ROM. Unencrypted, it is a BZ2-compressed tarball of git patch files that can be applied to a copy of the decomp source code. Additionally, `.merlon` files contain only source code *changes*, so they are much smaller than the original game ROM. This means that you can use git to view the history of a mod, and to merge mods together. It also means that all mods distributed as `.merlon` files are source-available. This is in contrast to other patch formats, such as Star Rod's `.mod`, which distribute mods as binary patches that cannot be viewed or merged.
