@@ -1,3 +1,5 @@
+//! Package registry
+
 use std::collections::{HashSet, HashMap, BinaryHeap};
 
 use anyhow::{Result, bail};

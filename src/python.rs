@@ -31,6 +31,11 @@ fn merlon(py: Python, merlon: &PyModule) -> PyResult<()> {
             init.add_class::<package::init::AddDependencyOptions>()?;
             init
         })?;
+        package.add_submodule({
+            let registry = PyModule::new(py, "registry")?;
+            registry.add_class::<package::Registry>()?;
+            registry
+        })?;
         package
     })?;
     merlon.add_submodule({

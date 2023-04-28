@@ -27,7 +27,7 @@ pub use manifest::{
     name::Name,
 };
 
-mod registry;
+pub mod registry;
 pub use registry::Registry;
 
 pub mod init;
