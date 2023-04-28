@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use super::package;
+use super::*;
 
 #[pymodule]
 fn merlon(py: Python, merlon: &PyModule) -> PyResult<()> {
@@ -15,7 +15,33 @@ fn merlon(py: Python, merlon: &PyModule) -> PyResult<()> {
             manifest.add_class::<package::manifest::Metadata>()?;
             manifest
         })?;
+        package.add_submodule({
+            let distribute = PyModule::new(py, "distribute")?;
+            distribute.add_class::<package::distribute::Distributable>()?;
+            distribute.add_class::<package::distribute::ExportOptions>()?;
+            distribute.add_class::<package::distribute::ApplyOptions>()?;
+            distribute.add_class::<package::distribute::OpenOptions>()?;
+            distribute
+        })?;
+        package.add_submodule({
+            let init = PyModule::new(py, "init")?;
+            init.add_class::<package::init::InitialisedPackage>()?;
+            init.add_class::<package::init::InitialiseOptions>()?;
+            init.add_class::<package::init::BuildRomOptions>()?;
+            init.add_class::<package::init::AddDependencyOptions>()?;
+            init
+        })?;
         package
+    })?;
+    merlon.add_submodule({
+        let emulator = PyModule::new(py, "emulator")?;
+        emulator.add_function(wrap_pyfunction!(emulator::run_rom, emulator)?)?;
+        emulator
+    })?;
+    merlon.add_submodule({
+        let rom = PyModule::new(py, "rom")?;
+        rom.add_class::<rom::Rom>()?;
+        rom
     })?;
     Ok(())
 }

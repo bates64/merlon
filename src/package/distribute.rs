@@ -20,6 +20,7 @@ use std::process::{Command, Stdio};
 use clap::Parser;
 use anyhow::{Result, bail, Context};
 use temp_dir::TempDir;
+use pyo3::prelude::*;
 
 use crate::package::InitialisedPackage;
 use crate::rom::Rom;
@@ -38,54 +39,65 @@ const EXTENSION: &str = "merlon";
 
 /// A package in the form of a distributable file.
 #[derive(Debug)]
+#[pyclass(module = "merlon.package.distribute")]
 pub struct Distributable {
     path: PathBuf,
 }
 
 /// Options for [`Package::export_distributable`].
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
+#[pyclass(module = "merlon.package.distribute")]
 pub struct ExportOptions {
     /// The output path to write the distributable to.
     ///
     /// If not specified, the default is `NAME VERSION.merlon`, where `NAME` is the name of the package
     /// and `VERSION` is the package version as specified in `merlon.toml`.
     #[arg(short, long)]
+    #[pyo3(get, set)]
     pub output: Option<PathBuf>,
 
     /// The base ROM to use as the encryption key.
     ///
     /// If not specified and the package is initialised, `papermario/ver/us/baserom.z64` will be used.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub baserom: Option<PathBuf>,
 }
 
 /// Options for [`Distributable::apply`].
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
+#[pyclass(module = "merlon.package.distribute")]
 pub struct ApplyOptions {
     /// The base ROM path.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub baserom: PathBuf,
 
     /// Options to build the ROM with.
     #[clap(flatten)]
+    #[pyo3(get, set)]
     pub build_rom_options: BuildRomOptions,
 }
 
 /// Options for [`Distributable::open_to_dir`].
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
+#[pyclass(module = "merlon.package.distribute")]
 pub struct OpenOptions {
     /// The output directory to write the package source code to.
     /// Must be empty or not exist.
     ///
     /// If not specified, the package name in kebab-case will be used.
     #[arg(short, long)]
+    #[pyo3(get, set)]
     pub output: Option<PathBuf>,
 
     /// The base ROM path.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub baserom: PathBuf,
 }
 
+#[pymethods]
 impl Package {
     /// Exports the package as a distributable `.merlon` file.
     pub fn export_distributable(&self, options: ExportOptions) -> Result<Distributable> {
@@ -167,6 +179,7 @@ impl Package {
     }
 }
 
+#[pymethods]
 impl Distributable {
     /// Opens the distributable into a directory.
     pub fn open_to_dir(&self, options: OpenOptions) -> Result<Package> {
@@ -260,19 +273,6 @@ impl Distributable {
         Package::try_from(output_dir)
     }
 
-    /// Opens the package into a temporary directory, and calls the given closure with the package.
-    pub fn open_scoped<F, R>(&self, baserom: PathBuf, f: F) -> Result<R>
-    where
-        F: FnOnce(Package) -> Result<R>,
-    {
-        let temp_dir = TempDir::new()?;
-        let package = self.open_to_dir(OpenOptions {
-            output: Some(temp_dir.path().to_owned()),
-            baserom,
-        })?;
-        f(package)
-    }
-
     /// Returns the path to the distributable.
     pub fn path(&self) -> &Path {
         &self.path
@@ -304,6 +304,21 @@ impl Distributable {
         self.open_scoped(baserom, |package| {
             package.manifest()
         })
+    }
+}
+
+impl Distributable {
+    /// Opens the package into a temporary directory, and calls the given closure with the package.
+    pub fn open_scoped<F, R>(&self, baserom: PathBuf, f: F) -> Result<R>
+    where
+        F: FnOnce(Package) -> Result<R>,
+    {
+        let temp_dir = TempDir::new()?;
+        let package = self.open_to_dir(OpenOptions {
+            output: Some(temp_dir.path().to_owned()),
+            baserom,
+        })?;
+        f(package)
     }
 }
 

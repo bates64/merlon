@@ -1,18 +1,22 @@
 use std::collections::{HashSet, HashMap, BinaryHeap};
 
 use anyhow::{Result, bail};
+use pyo3::prelude::*;
 
 use super::{Package, Id, manifest::{Dependency, Version}};
 
 /// A package registry. This is an arena of packages.
 /// Allows for querying packages by name, uuid, etc., and dependency queries.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
+#[pyclass(module = "merlon.package.registry")]
 pub struct Registry {
     packages: HashMap<Id, Package>,
 }
 
+#[pymethods]
 impl Registry {
     /// Create a new, empty registry.
+    #[new]
     pub fn new() -> Self {
         Self {
             packages: Default::default(),
@@ -40,6 +44,13 @@ impl Registry {
         }
     }
 
+    /// Returns true if the registry contains a package with the given ID.
+    pub fn has(&self, id: Id) -> bool {
+        self.packages.contains_key(&id)
+    }
+}
+
+impl Registry {
     /// Get a package by ID.
     pub fn get(&self, id: Id) -> Option<&Package> {
         self.packages.get(&id)
@@ -51,11 +62,6 @@ impl Registry {
             Some(package) => Ok(package),
             None => bail!("package {id} not found in registry"),
         }
-    }
-
-    /// Returns true if the registry contains a package with the given ID.
-    pub fn has(&self, id: Id) -> bool {
-        self.packages.contains_key(&id)
     }
 
     /// Edits a package given its ID. The callback is given a mutable reference to the package.
@@ -76,6 +82,7 @@ impl Registry {
 }
 
 // Queries. Note they talk in IDs, not a &Package, to satisfy the borrow checker.
+#[pymethods]
 impl Registry {
     /// Iterates over the direct dependency packages of a package.
     pub fn get_direct_dependencies(&self, id: Id) -> Result<HashSet<Dependency>> { 
@@ -110,6 +117,17 @@ impl Registry {
         Ok(dependencies)
     }
 
+    /// Returns the set of all dependencies across all packages in the registry.
+    pub fn all_dependencies(&self) -> Result<HashSet<Dependency>> {
+        let mut dependencies = HashSet::new();
+        for (id, _) in self.packages.iter() {
+            for dependency in self.get_dependencies(*id)? {
+                dependencies.insert(dependency);
+            }
+        }
+        Ok(dependencies)
+    }
+
     /// Returns true if a package has a dependency - transitive or direct - on another package.
     pub fn has_dependency(&self, id: Id, dependency_id: Id) -> Result<bool> {
         let dependencies = self.get_dependencies(id)?;
@@ -133,37 +151,6 @@ impl Registry {
         package.edit_manifest(|manifest| {
             manifest.declare_direct_dependency(dependency)
         })
-    }
-
-    /// Returns the set of all dependencies across all packages in the registry.
-    pub fn all_dependencies(&self) -> Result<HashSet<Dependency>> {
-        let mut dependencies = HashSet::new();
-        for (id, _) in self.packages.iter() {
-            for dependency in self.get_dependencies(*id)? {
-                dependencies.insert(dependency);
-            }
-        }
-        Ok(dependencies)
-    }
-
-    /// Generates a map of package IDs to their versions.
-    pub fn package_version_map(&self) -> Result<HashMap<Id, Version>> {
-        let mut map = HashMap::new();
-        for (id, package) in self.packages.iter() {
-            let id = *id;
-            let manifest = package.manifest()?;
-            let metadata = manifest.metadata();
-            if metadata.id() != id {
-                bail!("package id mismatch: {id}");
-            }
-            let version = metadata.version();
-            if let Some(other_version) = map.insert(id, version.clone()) {
-                if other_version != *version {
-                    bail!("package {id} has multiple versions: {version} and {other_version}");
-                }
-            }
-        }
-        Ok(map)
     }
 
     /// Returns an error if packages exist with incompatible versions.
@@ -225,32 +212,6 @@ impl Registry {
         Ok(topological_ordering)
     }
 
-    fn topological_ordering_visit(
-        &self,
-        id: Id,
-        topological_ordering: &mut Vec<Id>, 
-        visit_in_progress: &mut HashSet<Id>,
-        visited: &mut HashSet<Id>,
-    ) -> Result<()> {
-        if !visited.contains(&id) {
-            if visit_in_progress.contains(&id) {
-                bail!("found circular dependency {}", id);
-            }
-            visit_in_progress.insert(id);
-            let package = self.get_or_error(id)?;
-            let manifest = package.manifest()?;
-            for dependency in manifest.iter_direct_dependencies() {
-                if let Dependency::Package { id, .. } = dependency {
-                    self.topological_ordering_visit(*id, topological_ordering, visit_in_progress, visited)?;
-                }
-            }
-            visit_in_progress.remove(&id);
-            visited.insert(id);
-            topological_ordering.push(id);
-        }
-        Ok(())
-    }
-
     /// Returns packages that don't appear in the dependency tree for the given root package.
     pub fn get_orphans(&self, root: Id) -> Result<HashSet<Id>> {
         let dependency_ids: HashSet<Id> = self.get_dependencies(root)?
@@ -274,6 +235,54 @@ impl Registry {
         for id in self.get_orphans(root)? {
             let package = self.take(id)?;
             std::fs::remove_dir_all(package.path())?;
+        }
+        Ok(())
+    }
+}
+
+impl Registry {
+    /// Generates a map of package IDs to their versions.
+    pub fn package_version_map(&self) -> Result<HashMap<Id, Version>> {
+        let mut map = HashMap::new();
+        for (id, package) in self.packages.iter() {
+            let id = *id;
+            let manifest = package.manifest()?;
+            let metadata = manifest.metadata();
+            if metadata.id() != id {
+                bail!("package id mismatch: {id}");
+            }
+            let version = metadata.version();
+            if let Some(other_version) = map.insert(id, version.clone()) {
+                if other_version != *version {
+                    bail!("package {id} has multiple versions: {version} and {other_version}");
+                }
+            }
+        }
+        Ok(map)
+    }
+
+    fn topological_ordering_visit(
+        &self,
+        id: Id,
+        topological_ordering: &mut Vec<Id>, 
+        visit_in_progress: &mut HashSet<Id>,
+        visited: &mut HashSet<Id>,
+    ) -> Result<()> {
+        if !visited.contains(&id) {
+            if visit_in_progress.contains(&id) {
+                bail!("found circular dependency {}", id);
+            }
+            visit_in_progress.insert(id);
+            let package = self.get_or_error(id)?;
+            let manifest = package.manifest()?;
+            for dependency in manifest.iter_direct_dependencies() {
+                if let Dependency::Package { id, .. } = dependency {
+                    self.topological_ordering_visit(*id, topological_ordering, visit_in_progress, visited)?;
+                }
+            }
+            visit_in_progress.remove(&id);
+            visited.insert(id);
+            topological_ordering.push(id);
         }
         Ok(())
     }

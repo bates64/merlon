@@ -29,6 +29,7 @@ use anyhow::{Result, Error, bail, anyhow, Context};
 use clap::Parser;
 use scopeguard::defer;
 use semver::VersionReq;
+use pyo3::prelude::*;
 
 use super::manifest::Dependency;
 use super::{Package, Id, Registry, PATCHES_DIR_NAME, Distributable};
@@ -42,55 +43,66 @@ const GITIGNORE_FILE_NAME: &str = ".gitignore";
 
 /// An initialised package. Initialised packages are ready to be built.
 #[derive(Debug)]
+#[pyclass(module = "merlon.package.init")]
 pub struct InitialisedPackage {
     registry: Registry,
     package_id: Id,
 }
 
 /// Options for [`InitialisedPackage::initialise`].
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
+#[pyclass(module = "merlon.package.init")]
 pub struct InitialiseOptions {
     /// Path to an unmodified US-release Paper Mario (N64) ROM.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub baserom: PathBuf,
 
     /// Git revision of decomp to use.
     /// 
     /// If not provided, the latest commit on `main` is used.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub rev: Option<String>,   
 }
 
 /// Options for [`InitialisedPackage::build_rom`].
-#[derive(Parser, Debug, Default)]
+#[derive(Parser, Debug, Clone, Default)]
+#[pyclass(module = "merlon.package.init")]
 pub struct BuildRomOptions {
     /// Whether to skip configuring (useful if you've already configured).
     #[arg(long)]
+    #[pyo3(get, set)]
     pub skip_configure: bool,
 
     /// Path to output ROM to.
     #[arg(short, long)]
+    #[pyo3(get, set)]
     pub output: Option<PathBuf>,
 
     /// Whether to clean the build directory and build from scratch.
     ///
     /// Will also re-split assets.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub clean: bool,
 }
 
 /// Options for [`InitialisedPackage::add_dependency`].
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
+#[pyclass(module = "merlon.package.init")]
 pub struct AddDependencyOptions {
     /// Path to the package to add as a dependency.
     #[arg(long)]
+    #[pyo3(get, set)]
     pub path: PathBuf,
 }
 
+#[pymethods]
 impl Package {
     /// Initialises this package if needed, and returns an InitialisedPackage.
-    pub fn to_initialised(self, initialise_options: InitialiseOptions) -> Result<InitialisedPackage> {
-        if InitialisedPackage::is_initialised(&self)? {
+    pub fn to_initialised(&self, initialise_options: InitialiseOptions) -> Result<InitialisedPackage> {
+        if InitialisedPackage::is_initialised(self)? {
             InitialisedPackage::from_initialised(self.clone())
         } else {
             InitialisedPackage::initialise(self.clone(), initialise_options)
@@ -98,8 +110,10 @@ impl Package {
     }
 }
 
+#[pymethods]
 impl InitialisedPackage {
     /// If the given package is initialised, returns it as an [`InitialisedPackage`].
+    #[staticmethod]
     pub fn from_initialised(package: Package) -> Result<Self> {
         if !Self::is_initialised(&package)? {
             bail!("package is not initialised");
@@ -127,8 +141,9 @@ impl InitialisedPackage {
     }
 
     /// The package that this InitialisedPackage was created from.
-    pub fn package(&self) -> &Package {
-        self.registry.get(self.package_id).expect("package somehow removed from registry")
+    #[getter]
+    fn get_package(&self) -> Package {
+        self.package().clone()
     }
 
     /// The package ID.
@@ -147,8 +162,9 @@ impl InitialisedPackage {
     }
 
     /// The registry of packages. Includes dependencies of the package.
-    pub fn registry(&self) -> &Registry {
-        &self.registry
+    #[pyo3(name = "registry")]
+    fn py_registry(&self) -> Registry {
+        self.registry().clone()
     }
 
     /// Updates the registry.
@@ -158,6 +174,7 @@ impl InitialisedPackage {
 
     /// Initialises a package. Errors if it is already initialised.
     /// This will clone the papermario repository, and create the .merlon directory.
+    #[staticmethod]
     pub fn initialise(package: Package, options: InitialiseOptions) -> Result<Self> {
         if Self::is_initialised(&package)? {
             bail!("package is already initialised");
@@ -278,6 +295,7 @@ impl InitialisedPackage {
     }
 
     /// Checks whether a package is initialised.
+    #[staticmethod]
     pub fn is_initialised(package: &Package) -> Result<bool> {
         let path = package.path();
 
@@ -310,8 +328,6 @@ impl InitialisedPackage {
     /// Additionally, a branch will be created for this package if it doesn't exist, and the branch will be off of
     /// the branches that this package directly depends on.
     /// Each branch will have the respective package patches applied to it.
-    /// 
-    /// splat.yaml will be updated so that the asset_stack is correct.
     pub fn setup_git_branches(&self) -> Result<()> {
         // Make sure commits are saved to patches/
         let package_id_string = self.package_id.to_string();
@@ -369,10 +385,6 @@ impl InitialisedPackage {
         if self.git_current_branch()? != self.package_id.to_string() {
             bail!("patch order was incorrect");
         }
-
-        // Update splat.yaml with dependencies
-        // TODO
-        // TODO: also need to figure out whether to store splat.yaml in patches/ or not - probably not, but need merge strategy
 
         Ok(())
     }
@@ -562,6 +574,18 @@ impl InitialisedPackage {
             manifest.declare_direct_dependency(dependency)
         })?;
         Ok(id)
+    }
+}
+
+impl InitialisedPackage {
+    /// The package that this InitialisedPackage was created from.
+    pub fn package(&self) -> &Package {
+        self.registry.get(self.package_id).expect("package somehow removed from registry")
+    }
+
+    /// The registry of packages. Includes dependencies of the package.
+    pub fn registry(&self) -> &Registry {
+        &self.registry
     }
 
     fn git_create_branch(&self, branch_name: &str) -> Result<()> {

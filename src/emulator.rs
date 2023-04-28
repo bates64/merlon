@@ -3,15 +3,18 @@
 use std::path::PathBuf;
 use std::process::Command;
 use anyhow::{Result, bail};
+use pyo3::prelude::*;
 
 use crate::rom::Rom;
 
 /// Runs the given ROM in an emulator.
-pub fn run_rom(rom: &Rom) -> Result<std::process::ExitStatus> {
+#[pyfunction]
+pub fn run_rom(rom: &Rom) -> Result<()> {
     let emulator = find_emulator()?;
     Command::new(emulator)
         .arg(rom.path())
         .status()
+        .map(|_| ())
         .map_err(Into::into)
 }
 

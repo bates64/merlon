@@ -20,6 +20,21 @@ This is the documentation for the ``merlon`` Python package.
 .. automodule:: merlon.package.manifest
    :members:
 
+.. automodule:: merlon.package.distribute
+   :members:
+
+.. automodule:: merlon.package.init
+   :members:
+
+.. automodule:: merlon.package.registry
+   :members:
+
+.. automodule:: merlon.emulator
+   :members:
+
+.. automodule:: merlon.rom
+   :members:
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:

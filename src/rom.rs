@@ -6,32 +6,31 @@ use std::fs::File;
 use std::fmt;
 use sha1::{Sha1, Digest};
 use anyhow::Result;
+use pyo3::prelude::*;
 
 /// An N64 ROM file on disk.
 #[derive(Debug)]
+#[pyclass(module = "merlon.rom")]
 pub struct Rom {
     path: PathBuf,
 }
 
+#[pymethods]
 impl Rom {
     /// Returns the path to the ROM file.
+    #[getter]
     pub fn path(&self) -> &Path {
         &self.path
-    }
-    
-    /// Returns the ROM as a [`File`].
-    pub fn file(&self) -> std::io::Result<File> {
-        File::open(self.path())
     }
 
     /// Reads the ROM file into a [`Vec`] of bytes.
     pub fn read_bytes(&self) -> std::io::Result<Vec<u8>> {
         let mut file = self.file()?;
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).unwrap();
+        file.read_to_end(&mut buffer)?;
         Ok(buffer)
     }
-
+    
     /// Calculates the SHA1 hash of the ROM.
     pub fn sha1_string(&self) -> Result<String> {
         let mut bytes = self.read_bytes()?;
@@ -41,6 +40,17 @@ impl Rom {
             hex.push_str(&format!("{:02x}", byte));
         }
         Ok(hex)
+    }
+
+    fn __str__(&self) -> String {
+        format!("{}", self)
+    }
+}
+
+impl Rom {
+    /// Returns the ROM as a [`File`].
+    pub fn file(&self) -> std::io::Result<File> {
+        File::open(self.path())
     }
 }
 

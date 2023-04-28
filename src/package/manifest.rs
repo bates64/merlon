@@ -249,6 +249,12 @@ impl FromPyObject<'_> for Dependency {
     }
 }
 
+impl IntoPy<PyObject> for Dependency {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        self.to_object(py)
+    }
+}
+
 #[pymethods]
 impl Manifest {
     /// Creates a new manifest for a package with the given name.
