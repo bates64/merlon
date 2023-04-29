@@ -67,7 +67,6 @@ You can verify Merlon is installed by running the following command:
 
 ```console
 $ merlon --version
-Merlon 1.1.0
 ```
 
 ## Creating a new package
