@@ -317,21 +317,32 @@ impl Manifest {
         Ok(())
     }
 
-    /// Adds a dependency to the manifest. Errors if the dependency already exists.
+    /// Adds a dependency to the manifest.
+    /// If the dependency is declared already but with a different version/revision, errors.
     pub fn declare_direct_dependency(&mut self, dependency: Dependency) -> Result<()> {
-        match dependency {
-            Dependency::Package { id, .. } => {
-                if self.dependencies
-                    .iter()
-                    .any(|dep| matches!(dep, Dependency::Package { id: dep_id, .. } if id == *dep_id))
+        match &dependency {
+            Dependency::Package { id, version } => {
+                if let Some(Dependency::Package { version: existing_version, .. }) = self.dependencies
+                    .iter_mut()
+                    .find(|dep| matches!(dep, Dependency::Package { id: dep_id, .. } if *id == *dep_id))
                 {
-                    bail!("dependency on package ID {} already declared", id);
+                    // TODO: if existing version <= version, update it
+                    if *existing_version != *version {
+                        bail!("dependency on package ID {} already declared with incompatible version", id);
+                    }
+                    return Ok(());
                 }
             }
-            Dependency::Decomp { .. } => {
-                if self.has_direct_decomp_dependency() {
-                    // could also just update existing dependency?
-                    bail!("dependency on decomp already declared");
+            Dependency::Decomp { rev } => {
+                if let Some(Dependency::Decomp { rev: existing_rev, .. }) = self.dependencies
+                    .iter_mut()
+                    .find(|dep| matches!(dep, Dependency::Decomp { .. }))
+                {
+                    // TODO: if existing rev <= rev, update it
+                    if *existing_rev != *rev {
+                        bail!("dependency on decomp already declared with incompatible revision");
+                    }
+                    return Ok(());
                 }
             }
         }

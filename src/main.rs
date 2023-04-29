@@ -225,11 +225,18 @@ impl Args {
             SubCommand::Add(add_args) => {
                 if let Some(package) = package {
                     let mut initialised: InitialisedPackage = package.try_into()?;
+
+                    // Make sure everything is OK to edit
+                    if initialised.is_git_dirty()? {
+                        bail!("papermario repo has uncommitted changes, please commit or stash them first");
+                    }
+
+                    // Add the dependency
                     let id = initialised.add_dependency(add_args)?;
                     let package = initialised.registry().get_or_error(id)?;
                     println!("Added dependency: {}", package);
                     initialised.setup_git_branches()
-                        .context("failed to sync repo, is a dependency missing?")
+                        .context("failed to setup git branches with dependency, there might be a merge issue")
                 } else {
                     bail!("cannot add dependency: not in a package directory.");
                 }

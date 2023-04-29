@@ -297,15 +297,16 @@ After downloading, run the following command:
 
 ```console
 $ merlon add --path Skip-developer-logos.merlon
-```
-
-```{important}
-There is currently a bug where you might need to run the `merlon add` command **twice** to add a dependency.
-This will be fixed in a future release.
+Added dependency: Skip developer logos by Alex Bates <alex@nanaian.town>
 ```
 
 This will add the package as a dependency. You can now build your package as normal, and the patches from the
 dependency will be applied to your package.
+
+```{note}
+Users of your package **will** need to download the dependency themselves. Merlon does not automatically download
+dependencies for you. A better solution for this is planned.
+```
 
 ## Distribution
 
@@ -317,4 +318,4 @@ To do this, run the following command:
 $ merlon export
 ```
 
-This will export your package to a `.merlon` file which can be shared with others.
+This will export your package to a [distributable `.merlon` file](glossary.md#distributable).

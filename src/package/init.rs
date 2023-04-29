@@ -327,7 +327,8 @@ impl InitialisedPackage {
         Ok(true)
     }
 
-    /// Perform a repo sync.
+    /// Update the decomp repository so that all dependencies and patches are applied.
+    /// Also updates the patches directory if needed.
     /// 
     /// This will recreate the dependency tree in the subrepo, where each dependency has a branch.
     /// Additionally, a branch will be created for this package if it doesn't exist, and the branch will be off of
@@ -394,6 +395,19 @@ impl InitialisedPackage {
         Ok(())
     }
 
+    /// Returns true if the decomp repository has uncommitted changes.
+    pub fn is_git_dirty(&self) -> Result<bool> {
+        let output = Command::new("git")
+            .arg("status")
+            .arg("--porcelain")
+            .current_dir(self.subrepo_path())
+            .output()?;
+        if !output.status.success() {
+            bail!("failed to run git status");
+        }
+        Ok(!output.stdout.is_empty())
+    }
+
     /// Builds the ROM and returns the path to the output ROM.
     pub fn build_rom(&self, options: BuildRomOptions) -> Result<Rom> {
         let dir = self.subrepo_path();
@@ -442,7 +456,7 @@ impl InitialisedPackage {
         if self.git_current_branch()? != package_id_str {
             bail!("repo is not on package branch {}", package_id_str);
         }
-        if self.git_is_dirty()? {
+        if self.is_git_dirty()? {
             bail!("repo is dirty, commit changes and try again");
         }
 
@@ -639,18 +653,6 @@ impl InitialisedPackage {
         Ok(())
     }
 
-    fn git_is_dirty(&self) -> Result<bool> {
-        let output = Command::new("git")
-            .arg("status")
-            .arg("--porcelain")
-            .current_dir(self.subrepo_path())
-            .output()?;
-        if !output.status.success() {
-            bail!("failed to run git status");
-        }
-        Ok(!output.stdout.is_empty())
-    }
-
     fn git_stash(&self) -> Result<()> {
         let status = Command::new("git")
             .arg("stash")
@@ -708,7 +710,7 @@ impl InitialisedPackage {
         let prev_branch = self.git_current_branch()?;
 
         // Stash if needed
-        if self.git_is_dirty()? {
+        if self.is_git_dirty()? {
             self.git_stash()?;
             defer!(warn_if_err(self.git_stash_pop()));
         }
