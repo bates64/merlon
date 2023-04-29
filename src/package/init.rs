@@ -177,8 +177,13 @@ impl InitialisedPackage {
     #[staticmethod]
     pub fn initialise(package: Package, options: InitialiseOptions) -> Result<Self> {
         if Self::is_initialised(&package)? {
-            bail!("package is already initialised");
+            bail!("package is already initialised, delete .merlon directory and try again to force reinitialisation");
         }
+        // https://github.com/nanaian/merlon/issues/25
+        if package.path().join(SUBREPO_DIR_NAME).exists() {
+            bail!("there is already a decomp clone here - delete the {} directory and try again", SUBREPO_DIR_NAME);
+        }
+
         let path_clone = package.path().to_owned();
         let error_context = format!("failed to initialise package {}", &package);
         let do_it = || {
@@ -521,8 +526,11 @@ impl InitialisedPackage {
     pub fn add_dependency(&mut self, options: AddDependencyOptions) -> Result<Id> {
         let path = options.path;
         let dependencies_dir = self.package().path().join(DEPENDENCIES_DIR_NAME);
+        create_dir_all(&dependencies_dir)
+            .with_context(|| format!("failed to create dependencies dir {}", dependencies_dir.display()))?;
         let package = if super::is_unexported_package(&path) {
-            let package = Package::try_from(path)?;
+            let package = Package::try_from(path)
+                .context("failed to open dependency as package")?;
 
             // Could also do symbolic link?
             let path = dependencies_dir.join(package.id()?.to_string());
@@ -547,21 +555,24 @@ impl InitialisedPackage {
 
             package
         } else if super::distribute::is_distributable_package(&path) {
-            let distributable = Distributable::try_from(path)?;
-            let manifest = distributable.manifest(self.baserom_path())?;
+            let distributable = Distributable::try_from(path)
+                .context("failed to open dependency as distributable")?;
+            let manifest = distributable.manifest(self.baserom_path())
+                .context("failed to read dependency manifest")?;
             let package_id = manifest.metadata().id().to_string();
             let path = dependencies_dir.join(package_id);
             if path.is_dir() {
                 log::info!("dependency directory already exists, updating it");
-                remove_dir_all(&path)?;
+                remove_dir_all(&path).context("failed to remove existing dependency directory")?;
             }
             distributable.open_to_dir(super::distribute::OpenOptions {
                 output: Some(path),
                 baserom: self.baserom_path(),
-            })?
+            }).context("failed to open distributable to dependencies dir")?
         } else {
             bail!("not a package directory or distributable file: {}", path.display());
         };
+        log::info!("adding dependency: {}", package);
         let id = package.id()?;
         let id = match self.registry.has(id) {
             true => id,
