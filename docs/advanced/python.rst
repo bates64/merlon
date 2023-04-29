@@ -1,7 +1,25 @@
-Python API
-==========
+Python
+======
 
-This is the documentation for the ``merlon`` Python package.
+Installation
+------------
+
+Merlon is available as a package on PyPI.
+
+.. important::
+
+   Merlon requires Python 3.7 or newer.
+
+You can install it with ``pip``:
+
+.. code-block:: console
+
+   $ pip install merlon
+
+Usage
+-----
+
+Once installed, you can import the library in your Python code:
 
 .. code-block:: python
 
@@ -10,6 +28,8 @@ This is the documentation for the ``merlon`` Python package.
    print("Merlon version:", merlon.version())
    print("Current package:", merlon.package.Package.current())
 
+API Reference
+-------------
 
 .. automodule:: merlon
    :members:

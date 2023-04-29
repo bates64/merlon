@@ -8,12 +8,14 @@ imagesize==1.4.1
 Jinja2==3.1.2
 MarkupSafe==2.1.2
 maturin==0.14.17
+myst-parser==1.0.0
 packaging==23.1
 Pygments==2.15.1
 requests==2.29.0
 snowballstemmer==2.2.0
 Sphinx==6.2.1
 sphinx-rtd-theme==1.2.0
+sphinx-copybutton==0.5.2
 sphinxcontrib-applehelp==1.0.4
 sphinxcontrib-devhelp==1.0.2
 sphinxcontrib-htmlhelp==2.0.1

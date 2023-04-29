@@ -1,4 +1,4 @@
-# Merlon
+[![Merlon](assets/logo/logotype.svg)](https://merlon.readthedocs.io)
 
 [![](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/test.yml?branch=main)](https://github.com/nanaian/merlon/actions)
 [![](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding-279322074412089344)
