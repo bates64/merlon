@@ -15,7 +15,7 @@ writing mods in C, and it does not support adding other mods as dependencies. Me
 | View source code of distributable                    | No       | Yes                    |
 | Dependency management                                | No       | Yes                    |
 | C language support                                   | No       | Yes (decomp)           |
-| `.mpat`/`.bpat` language support                     | No       | Yes                    |
+| `.mpat`/`.bpat` language support                     | Yes      | No                     |
 | Compile modded ROM                                   | Yes      | Yes (`merlon build`)   |
 | Easily run modded ROM in emulator                    | No (manual) | Yes (`merlon run`)  |
 | GUI Map editor                                       | Yes      | No (use Star Rod)      |
