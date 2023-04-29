@@ -274,6 +274,17 @@ $ merlon run
 
 You should hear the Whale Theme music playing on the title screen.
 
+Now we know the change worked, we should commit it to Git. To do this, run the following commands:
+
+```console
+$ git -C papermario add papermario/src/state_title_screen.c
+$ git -C papermario commit -m "play Whale Theme on title screen"
+```
+
+```{tip}
+If you're using Visual Studio Code, you can stage and commit changes from the *Source Control* tab.
+```
+
 ### Asset changes
 
 This section is a work-in-progress. For now, look at
