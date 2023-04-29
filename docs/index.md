@@ -7,6 +7,8 @@ Merlon is a mod manager for the Paper Mario (N64) decompilation.
 :glob:
 getting_started
 star_rod
+emulators
+glossary
 ```
 
 ```{toctree}
