@@ -1,6 +1,6 @@
 [![Merlon](assets/logo/logotype.png)](https://merlon.readthedocs.io)
 
-[![](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/rust.yml?branch=main)](https://github.com/nanaian/merlon/actions)
+[![](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/release.yml?branch=main)](https://github.com/nanaian/merlon/actions)
 [![](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding-279322074412089344)
 [![](https://img.shields.io/crates/v/merlon)](https://crates.io/crates/merlon)
 [![](https://img.shields.io/pypi/v/merlon)](https://pypi.org/project/merlon/)

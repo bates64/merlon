@@ -1,0 +1,54 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+
+    - uses: Swatinem/rust-cache@v1
+
+    - name: Download base ROM
+      run: curl -L $BASEROM_US_URL -o tests/baserom.z64
+      env:
+        BASEROM_US_URL: ${{ secrets.BASEROM_US_URL }}
+    
+    - name: Set git user for tests
+      run: |
+        git config --global user.name "GitHub Actions"
+        git config --global user.email "merlongithubactions@nanaian.town"
+
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --verbose --no-fail-fast
+      env:
+        RUST_BACKTRACE: full
+        RUST_LOG: debug
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        components: clippy, rustfmt
+        override: true
+    - uses: actions-rs/cargo@v1
+      with:
+        command: check
+  
+  # TODO: clippy and rustfmt
