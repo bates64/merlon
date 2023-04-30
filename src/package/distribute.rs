@@ -183,7 +183,8 @@ impl Package {
 impl Distributable {
     /// Opens the distributable into a directory.
     pub fn open_to_dir(&self, options: OpenOptions) -> Result<Package> {
-        let temp_dir = TempDir::new()?;
+        let temp_dir = TempDir::new()
+            .context("failed to create temporary directory")?;
         let tar_path = temp_dir.path().join("package.tar.bz2");
 
         // Check baserom exists
@@ -203,7 +204,8 @@ impl Distributable {
             .arg("-in").arg(&self.path)
             .arg("-out").arg(&tar_path)
             .arg("-pass").arg(format!("file:{}", options.baserom.display()))
-            .status()?;
+            .status()
+            .context("failed run openssl")?;
         if !status.success() {
             bail!("failed to decrypt {}", self.path.display());
         }
@@ -215,7 +217,8 @@ impl Distributable {
             .arg("-C").arg(&temp_dir.path())
             .arg(ROOT_DIR_NAME)
             .stderr(Stdio::null())
-            .status()?;
+            .status()
+            .context("failed run tar")?;
         if !status.success() {
             bail!("failed to decompress {}", tar_path.display());
         }
@@ -339,14 +342,14 @@ impl TryFrom<PathBuf> for Distributable {
         if is_distributable_package(&path) {
             Ok(Self { path })
         } else {
-            bail!("{} is not an exported Merlon package", path.display());
+            bail!("{} is not a Merlon distributable", path.display());
         }
     }
 }
 
 impl fmt::Display for Distributable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{} (exported)", self.path.display())
+        write!(f, "{} (distributable)", self.path.display())
     }
 }
 

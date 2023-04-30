@@ -167,7 +167,7 @@ impl Args {
                     }
 
                     let exported = package.export_distributable(export_args)?;
-                    println!("Exported package: {}", exported);
+                    println!("Exported distributable: {}", exported);
                     Ok(())
                 } else {
                     bail!("cannot export package: not in a package directory.");
@@ -184,8 +184,10 @@ impl Args {
                 Ok(())
             },
             SubCommand::Open(open_args) => {
-                let distributable = Distributable::try_from(open_args.distributable)?;
-                let package = distributable.open_to_dir(open_args.options)?;
+                let distributable = Distributable::try_from(open_args.distributable)
+                    .context("failed to open distributable file")?;
+                let package = distributable.open_to_dir(open_args.options)
+                    .context("failed to open distributable to package directory")?;
                 println!("{}", package.copyright_notice()?);
                 println!("Opened {} to directory {}", package, package.path().display());
                 Ok(())
