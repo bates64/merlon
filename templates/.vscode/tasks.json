@@ -8,7 +8,7 @@
             "command": "merlon build",
             "problemMatcher": [
                 {
-                    "fileLocation": ["relative", "${workspaceFolder}"],
+                    "fileLocation": ["relative", "${workspaceFolder}/papermario"],
                     "pattern": {
                         "regexp": "(src\\/.*|include\\/.*):(\\d+):\\s+(warning|error):\\s+(.*)$",
                         "file": 1,
@@ -18,7 +18,7 @@
                     },
                 },
                 {
-                    "fileLocation": ["relative", "${workspaceFolder}"],
+                    "fileLocation": ["relative", "${workspaceFolder}/papermario"],
                     "severity": "error",
                     "pattern": {
                         "regexp": "(src\\/.*|include\\/.*):(\\d+):\\s+(?!warning|\\()(.*)$",
