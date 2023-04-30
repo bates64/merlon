@@ -78,24 +78,39 @@ jobs:
   macos:
     name: Build for macOS
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        target: [x86_64, aarch64]
     steps:
     - uses: actions/checkout@v2
+    
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-        target: ${{ matrix.target }}-apple-darwin
-    - uses: actions-rs/cargo@v1
+        target: x86_64-apple-darwin
+  
+    - name: Build x86_64
+      uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --release --target ${{ matrix.target }}-apple-darwin
+        args: --release --target x86_64-apple-darwin --all-features
+
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: aarch64-apple-darwin
+
+    - name: Build aarch64 (Apple Silicon)
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --release --target aarch64-apple-darwin --all-features
+
+    - name: Create universal binary
+      run: lipo -create -output target/release/merlon target/release/merlon-x86_64-apple-darwin target/release/merlon-aarch64-apple-darwin
+
+    - run: ls -l target/release
     - uses: actions/upload-artifact@v3
       with:
-        name: merlon-macos-${{ matrix.target }}
-        path: target/release/merlon
+        name: merlon-macos
+        path: 
   
   linux:
     name: Build for Linux
@@ -106,14 +121,13 @@ jobs:
         target: [x86_64]
     steps:
     - uses: actions/checkout@v2
-    - uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: ${{ matrix.target }}-unknown-linux-gnu
-    - uses: actions-rs/cargo@v1
+  
+    - name: Build x86_64
+      uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --release --target ${{ matrix.target }}-unknown-linux-gnu
+        args: --release --target x86_64-unknown-linux-gnu --all-features
+  
     - uses: actions/upload-artifact@v3
       with:
         name: merlon-linux-${{ matrix.target }}
