@@ -1,5 +1,10 @@
 # Getting Started
 
+If you run into any problems while following this guide, please ask for help in the
+[#merlon](https://discord.com/channels/279322074412089344/1099844075399696394) channel of
+[the Paper Mario Modding Discord server](https://discord.gg/paper-mario-modding-279322074412089344). Alternatively,
+you can [open an issue](https://github.com/nanaian/merlon/issues/new) on GitHub.
+
 ## Installation
 
 ### Supported Platforms
@@ -37,37 +42,58 @@ If you don't have WSL, follow these instructions to install it:
 $ sudo apt update && sudo apt upgrade && cd ~
 ```
 
-Crucially, **you must install Rust and Merlon in WSL** rather than Windows. All future commands in this guide should be run in WSL.
+Crucially, **you must install Merlon in WSL** rather than Windows. All future commands in this guide should be run in WSL.
 ````
 
-### Install Rust
+### Downloading and installing
 
-Merlon is written in Rust. To install Merlon, you must first install Rust. You can do this by running the following
-command:
+There are a number of ways to install Merlon.
+
+1. [Executable releases](#releases)
+2. [Cargo](#cargo) - if you already have Rust installed
+3. [From source](advanced/build_source.md) - if you want to build Merlon yourself
+
+If you're not sure which to choose, choose the first option.
+
+#### Releases
+
+Download the appropriate executable for your operating system from the
+[GitHub releases page](https://github.com/nanaian/merlon/releases).
+
+- **Linux** users should download `merlon-linux-x86_64`. This is a static binary that should work on any Linux
+  distribution. If you're not on x86_64, you can [build Merlon from source](advanced/build_source.md) instead.
+- **MacOS** users should download `merlon-macos`. This is a universal binary that works on both Intel and Apple Silicon
+  Macs.
+- **Windows Subsystem for Linux 2** users should download `merlon-linux-x86_64`.
+
+Once downloaded, move the file to somewhere on your PATH and mark it executable. For example:
+
 ```console
-$ curl https://sh.rustup.rs -sSf | sh
+$ sudo mv ~/Downloads/merlon-linux-x86_64 /usr/local/bin/merlon
+$ sudo chmod +x /usr/local/bin/merlon
 ```
 
-### Build Merlon from source
+On MacOS you may also need to run `sudo xattr -d com.apple.quarantine /usr/local/bin/merlon` to stop Gatekeeper from
+blocking the executable. This happens because the executable is not signed and I don't want to pay Apple $100/year to
+sign it.
 
-```{note}
-In future, Merlon executables will be available for direct download so users will not need to install Rust or build
-Merlon from source.
-```
+#### Cargo
 
-Once you have installed Rust, you can install Merlon with the following command:
+If you already have Rust installed, you can install Merlon using Cargo:
 
 ```console
 $ cargo install merlon
 ```
 
-### Verify Merlon is installed
+### Verifying the installation
 
-You can verify Merlon is installed by running the following command:
+To verify that Merlon is installed correctly, run the following command:
 
 ```console
 $ merlon --version
 ```
+
+If Merlon is installed, it will output "Merlon" followed by the version number.
 
 ## Creating a new package
 
