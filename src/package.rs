@@ -177,7 +177,12 @@ impl Package {
 
 impl Package {
     pub(crate) fn apply_patches_to_decomp_repo(&self, repo: &Path) -> Result<()> {
-        let mut patch_files = fs::read_dir(&self.path.join(PATCHES_DIR_NAME))?
+        let patches_path = self.path.join(PATCHES_DIR_NAME);
+        if !patches_path.exists() {
+            log::warn!("{} directory does not exist", PATCHES_DIR_NAME);
+            return Ok(())
+        }
+        let mut patch_files = fs::read_dir(patches_path)?
             .map(|entry| entry.unwrap().path())
             .filter(|path| path.extension().map(|ext| ext == "patch").unwrap_or(false))
             .map(|path| path.canonicalize())
