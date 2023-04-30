@@ -9,7 +9,17 @@ import merlon
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Merlon'
-copyright = '2023, Alex Bates. The authors are not affiliated with Nintendo Co., Ltd. in any way. PAPER MARIO is a trademark owned by Nintendo Co., Ltd'
+copyright = """
+2023, Alex Bates.
+
+The author is not affiliated with Nintendo Co., Ltd. in any way.
+
+The PAPER MARIO trademark owned by Nintendo Co., Ltd. is used in this modding tool under the fair use doctrine, solely
+for the purpose of enabling users to modify the game in a transformative manner.
+
+Mods packaged into a distributable with this application are encrypted using the original game ROM, and cannot be used
+without the original game ROM. No guarantees are made about the legal status of using this application to create mods
+"""
 author = 'Alex Bates'
 version = merlon.version()
 
