@@ -104,13 +104,13 @@ jobs:
         args: --release --target aarch64-apple-darwin --all-features
 
     - name: Create universal binary
-      run: lipo -create -output target/release/merlon target/release/merlon-x86_64-apple-darwin target/release/merlon-aarch64-apple-darwin
+      run: lipo -create -output merlon target/release/*-apple-darwin/release/merlon
 
     - run: ls -l target/release
     - uses: actions/upload-artifact@v3
       with:
         name: merlon-macos
-        path: 
+        path: merlon
   
   linux:
     name: Build for Linux
@@ -126,12 +126,12 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: build
-        args: --release --target x86_64-unknown-linux-gnu --all-features
+        args: --release --target ${{ matrix.target }}-unknown-linux-gnu --all-features
   
     - uses: actions/upload-artifact@v3
       with:
         name: merlon-linux-${{ matrix.target }}
-        path: target/release/merlon
+        path: target/release/${{ matrix.target }}-unknown-linux-gnu/release/merlon
 
   github_prerelease:
     name: Create GitHub prerelease
@@ -143,17 +143,6 @@ jobs:
 
     # download artifacts from previous steps
     - uses: actions/download-artifact@v3
-      with:
-        name: merlon-linux-x86_64
-    - uses: actions/download-artifact@v3
-      with:
-        name: merlon-linux-aarch64
-    - uses: actions/download-artifact@v3
-      with:
-        name: merlon-macos-x86_64
-    - uses: actions/download-artifact@v3
-      with:
-        name: merlon-macos-aarch64
 
     # create release
     - uses: "marvinpinto/action-automatic-releases@latest"
@@ -164,9 +153,7 @@ jobs:
         title: "Development Build"
         files: |
           merlon-linux-x86_64
-          merlon-linux-aarch64
-          merlon-macos-x86_64
-          merlon-macos-aarch64
+          merlon-macos
           LICENSE
   
   github_release:
@@ -188,6 +175,5 @@ jobs:
         title: "${{ github.ref }}"
         files: |
           merlon-linux-x86_64
-          merlon-macos-x86_64
-          merlon-macos-aarch64
+          merlon-macos
           LICENSE
