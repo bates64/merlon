@@ -243,7 +243,8 @@ impl Distributable {
         let output_dir = match options.output {
             Some(output_dir) => output_dir,
             None => {
-                let manifest = Manifest::read_from_path(&root_dir.join(MANIFEST_FILE_NAME))?;
+                let manifest = Manifest::read_from_path(&root_dir.join(MANIFEST_FILE_NAME))
+                    .context("failed to read manifest")?;
                 PathBuf::from(manifest.metadata().name().as_kebab_case())
             },
         };
@@ -255,18 +256,27 @@ impl Distributable {
                 bail!("output directory {:?} is not empty", &output_dir);
             }
         } else {
-            fs::create_dir(&output_dir)?;
+            fs::create_dir(&output_dir)
+                .with_context(|| format!("failed to create output directory {:?}", &output_dir))?;
         }
 
         // Copy files into the output directory
-        fs::copy(&root_dir.join(MANIFEST_FILE_NAME), &output_dir.join(MANIFEST_FILE_NAME))?;
-        fs::copy(&root_dir.join(README_FILE_NAME), &output_dir.join(README_FILE_NAME))?;
-        fs::create_dir(&output_dir.join(PATCHES_DIR_NAME))?;
-        for entry in fs::read_dir(&root_dir.join(PATCHES_DIR_NAME))? {
+        fs::copy(&root_dir.join(MANIFEST_FILE_NAME), &output_dir.join(MANIFEST_FILE_NAME))
+            .context("failed to copy manifest")?;
+        fs::copy(&root_dir.join(README_FILE_NAME), &output_dir.join(README_FILE_NAME))
+            .context("failed to copy readme")?;
+        fs::create_dir(&output_dir.join(PATCHES_DIR_NAME))
+            .context("failed to create patches directory")?;
+        for entry in fs::read_dir(&root_dir.join(PATCHES_DIR_NAME)).context("failed to read patches directory")? {
             let entry = entry?;
             let path = entry.path();
             if path.is_file() {
-                fs::copy(&path, &output_dir.join(PATCHES_DIR_NAME).join(path.file_name().unwrap()))?;
+                if let Some(file_name) = path.file_name() {
+                    fs::copy(&path, &output_dir.join(PATCHES_DIR_NAME).join(file_name))
+                        .context("failed to copy patch")?;
+                } else {
+                    log::warn!("patch {:?} has no file name", path);
+                }
             }
         }
 
