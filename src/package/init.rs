@@ -192,8 +192,11 @@ impl InitialisedPackage {
             // Clone decomp subrepo
             let mut command = Command::new("git");
             command
-                .arg("clone")
-                .arg("--depth=1");
+                .arg("clone");
+            // If we're not using a specific revision, only clone the latest commit
+            if options.rev.is_none() {
+                command.arg("--depth=1");
+            }
             // TODO: if existing clone, reference that
             /*if let Some(repo) = local_decomp_repo.as_ref() {
                 command.arg("--reference").arg(repo.path());
