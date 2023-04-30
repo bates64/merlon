@@ -131,6 +131,5 @@ jobs:
         prerelease: true
         title: "Development Build"
         files: |
-          merlon-linux-x86_64
-          merlon-macos
+          release/*
           LICENSE
