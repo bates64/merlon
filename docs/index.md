@@ -9,6 +9,7 @@ getting_started
 star_rod
 emulators
 glossary
+changelog
 ```
 
 ```{toctree}

@@ -262,7 +262,7 @@ impl Manifest {
     pub fn new(name: Name) -> Result<Self> {
         Ok(Self {
             metadata: Metadata {
-                id: Id::new(),
+                id: Id::generate_for_package_name(&name),
                 name,
                 version: "0.1.0".parse()?,
                 authors: vec![get_author()?],

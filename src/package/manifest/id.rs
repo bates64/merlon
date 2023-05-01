@@ -1,36 +1,76 @@
-use std::{ops::Deref, str::FromStr};
+use std::str::FromStr;
 use std::fmt;
-use uuid::Uuid;
-use pyo3::{prelude::*, exceptions::PyValueError};
+use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
+use heck::AsKebabCase;
+use thiserror::Error;
+use arrayvec::ArrayString;
 
-/// Package ID. This is a UUID.
+use super::Name;
+
+pub const MAX_LEN: usize = 64; // 64 characters should be enough; see https://github.com/rust-lang/crates.io/issues/696
+
+/// Package ID.
+/// It is used to uniquely identify a package, no two packages in the same registry can have the same ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Id(Uuid);
+#[serde(transparent)]
+pub struct Id(ArrayString<MAX_LEN>);
+
+/// Errors that can occur when validating a package name.
+#[derive(Error, Debug)]
+pub enum Error {
+    /// ID is not in lower kebab-case.
+    #[error("package ID must be in lower kebab-case")]
+    NotKebabCase,
+
+    /// ID is longer than 64 characters.
+    #[error("package ID must not be longer than 64 characters")]
+    TooLong,
+
+    /// ID is too short, or empty. IDs must be at least 3 characters long.
+    #[error("package ID must have at least 3 characters")]
+    TooShort,
+}
+
+mod python_exception {
+    #![allow(missing_docs)]
+    pyo3::create_exception!(merlon, Error, pyo3::exceptions::PyValueError);
+}
 
 impl Id {
-    /// Generates a new unique package ID.
-    pub fn new() -> Self {
-        Self(Uuid::new_v4())
+    /// Creates a new ID from a package name.
+    pub fn generate_for_package_name(name: &Name) -> Self {
+        let mut s = name.as_kebab_case();
+        if s.len() > 3 {
+            s.truncate(64);
+            s
+        } else {
+            const PREFIX: &'static str = "merlon-";
+            s.truncate(MAX_LEN - PREFIX.len());
+            format!("{}-{}", PREFIX, s)
+        }.parse().expect("ID is valid")
     }
 }
 
-impl From<Uuid> for Id {
-    fn from(uuid: Uuid) -> Self {
-        Self(uuid)
+impl FromStr for Id {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // Validate the ID.
+        if s.len() < 3 {
+            return Err(Error::TooShort);
+        }
+        if s != &format!("{}", AsKebabCase(&s)) {
+            return Err(Error::NotKebabCase);
+        }
+        // Convert it
+        let s = ArrayString::from(&s).map_err(|_| Error::TooLong)?;
+        Ok(Self(s))
     }
 }
 
-impl From<Id> for Uuid {
-    fn from(id: Id) -> Self {
-        id.0
-    }
-}
-
-impl Deref for Id {
-    type Target = Uuid;
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl AsRef<str> for Id {
+    fn as_ref(&self) -> &str {
+        self.0.as_str()
     }
 }
 
@@ -40,21 +80,10 @@ impl fmt::Display for Id {
     }
 }
 
-impl FromStr for Id {
-    type Err = uuid::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(Uuid::parse_str(s)?))
-    }
-}
-
 impl FromPyObject<'_> for Id {
     fn extract(ob: &PyAny) -> PyResult<Self> {
-        let string: String = ob.extract()?;
-        let uuid = Uuid::parse_str(&string).map_err(|e| {
-            PyValueError::new_err(format!("Invalid UUID: {}", e))
-        })?;
-        Ok(Self(uuid))
+        let s: String = ob.extract()?;
+        Self::from_str(&s).map_err(|e| python_exception::Error::new_err(e.to_string()))
     }
 }
 
