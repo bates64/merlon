@@ -26,11 +26,16 @@ writing mods in C, and it does not support adding other mods as dependencies. Me
 
 ## Using the Star Rod Map and Sprite Editors with Merlon
 
+```{note}
+The Star Rod world editor and image editor are **not** compatible with Merlon.
+```
+
 Star Rod's map and sprite editors can be used with Merlon. To do so:
 
 1. Open Star Rod.
 2. Open the *Mod Manager*.
 3. Change the *Mod Folder* to the `papermario` subdirectory of your [initialised](getting_started.md#initialisation) Merlon package.
-4. Ensure that assets are dumped. Do not click _Copy Assets to Mod_.
-4. Close and reopen Star Rod.
-5. Open the *Map Editor* or *Sprite Editor*.
+4. _Dump Assets_ if you haven't already.
+5. _Copy Assets to Mod_.
+6. Close and reopen Star Rod.
+7. Open the *Map Editor* or *Sprite Editor*.
