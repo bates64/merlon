@@ -371,6 +371,16 @@ impl Manifest {
         }
         self.declare_direct_dependency(Dependency::Decomp { rev })
     }
+
+    /// Returns the Git revision (commit hash) of the decomp dependency, if one exists.
+    pub fn get_direct_decomp_dependency_rev(&self) -> Option<&str> {
+        if let Some(dep) = self.dependencies.iter().find(|dep| matches!(dep, Dependency::Decomp { .. })) {
+            if let Dependency::Decomp { rev } = dep {
+                return Some(rev);
+            }
+        }
+        None
+    }
 }
 
 /// Get author from git config as `name <email>`

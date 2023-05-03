@@ -184,6 +184,13 @@ impl InitialisedPackage {
             bail!("there is already a decomp clone here - delete the {} directory and try again", SUBREPO_DIR_NAME);
         }
 
+        // If rev not provided on command line, use the one in the manifest, otherwise use latest
+        let manifest = package.manifest()?;
+        let rev = match &options.rev {
+            Some(rev) => Some(rev.as_str()),
+            None => manifest.get_direct_decomp_dependency_rev(),
+        };
+
         let path_clone = package.path().to_owned();
         let error_context = format!("failed to initialise package {}", &package);
         let do_it = || {
@@ -194,7 +201,7 @@ impl InitialisedPackage {
             command
                 .arg("clone");
             // If we're not using a specific revision, only clone the latest commit
-            if options.rev.is_none() {
+            if rev.is_none() {
                 command.arg("--depth=1");
             }
             // TODO: if existing clone, reference that
@@ -210,12 +217,12 @@ impl InitialisedPackage {
                 bail!("failed to clone decomp repository");
             }
 
-            if let Some(rev) = options.rev {
+            if let Some(rev) = &rev {
                 // Reset to revision
                 let status = Command::new("git")
                     .arg("reset")
                     .arg("--hard")
-                    .arg(&rev)
+                    .arg(rev)
                     .current_dir(package.path().join(SUBREPO_DIR_NAME))
                     .status()?;
                 if !status.success() {
@@ -243,7 +250,7 @@ impl InitialisedPackage {
             // Create vscode dir and copy files
             let vscode_dir = package.path().join(VSCODE_DIR_NAME);
             create_dir(&vscode_dir)
-                .with_context(|| format!("failed to create {VSCODE_DIR_NAME} directory"))?;
+                .with_context(|| format!("failed to create {} directory", vscode_dir.display()))?;
             write(vscode_dir.join("c_cpp_properties.json"), include_str!("../../templates/.vscode/c_cpp_properties.json"))
                 .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/c_cpp_properties.json"))?;
             write(vscode_dir.join("extensions.json"), include_str!("../../templates/.vscode/extensions.json"))
