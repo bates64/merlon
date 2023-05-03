@@ -198,8 +198,16 @@ impl Package {
             .current_dir(&repo)
             .status()?;
         if !status.success() {
-            // git am --abort?
-            bail!("failed to cleanly apply patches - run `cd papermario && git am --abort` to abort the merge");
+            // The merge failed! Abort the merge and tell the user to fix it.
+            let status = Command::new("git")
+                .arg("am")
+                .arg("--abort")
+                .current_dir(&repo)
+                .status()?;
+            if !status.success() {
+                panic!("failed to abort merge");
+            }
+            bail!("failed to apply patches");
         }
         Ok(())
     }
