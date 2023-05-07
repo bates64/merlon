@@ -24,13 +24,13 @@ writing mods in C, and it does not support adding other mods as dependencies. Me
 | GUI Image editor                                     | Yes      | No                     |
 | CLI-GUI feature parity                               | No       | Yes                    |
 
-## Using the Star Rod Map and Sprite Editors with Merlon
+## Using the Star Rod editors with Merlon
 
 ```{note}
 The Star Rod world editor and image editor are **not** compatible with Merlon.
 ```
 
-Star Rod's map and sprite editors can be used with Merlon. To do so:
+Star Rod's map, string (message), and sprite editors can be used with Merlon. To do so:
 
 1. Open Star Rod.
 2. Open the *Mod Manager*.
@@ -38,4 +38,4 @@ Star Rod's map and sprite editors can be used with Merlon. To do so:
 4. _Dump Assets_ if you haven't already.
 5. _Copy Assets to Mod_.
 6. Close and reopen Star Rod.
-7. Open the *Map Editor* or *Sprite Editor*.
+7. Open an editor.
