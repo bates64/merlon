@@ -1,17 +1,15 @@
 use serde::{Deserialize, Serialize};
 use merlon::package::Package;
 
+mod logotype;
 mod support_link;
 
 #[derive(Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct App {
-    package_state: Option<PackageState>,
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct PackageState {
-    package: Package,
+    packages: Vec<Package>,
+    logotype: logotype::Logotype,
+    about_window: bool,
 }
 
 impl App {
@@ -29,18 +27,12 @@ impl App {
 }
 
 impl eframe::App for App {
-    /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Examples of how to create different panels and windows.
-        // Pick whichever suits you.
-        // Tip: a good default choice is to just keep the `CentralPanel`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
+        self.logotype.load_if_first_attempt(ctx);
 
         egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
             // Draw title bar on macOS
@@ -52,30 +44,50 @@ impl eframe::App for App {
             });
         });
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            
+        egui::SidePanel::right("side_panel").resizable(false).show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                if ui.button("About").clicked() {
+                    self.about_window = true;
+                }
+            });
+        });
+
+        egui::Window::new("About").resizable(false).open(&mut self.about_window).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.spacing_mut().item_spacing.y = 8.0;
 
                 ui.add_space(16.0);
-                ui.heading("Welcome to Merlon"); // TODO: use logotype
+                ui.add(&mut self.logotype);
 
                 ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
                 egui::warn_if_debug_build(ui);
 
                 ui.add_space(16.0);
 
+                ui.label("© 2023 Alex Bates");
+
+                ui.add_space(16.0);
+
                 ui.add(support_link::SupportLink);
                 ui.add(egui::Hyperlink::from_label_and_url("Documentation", "https://merlon.readthedocs.io/"));
-                ui.add(egui::Hyperlink::from_label_and_url("Issues", "https://github.com/nanaian/merlon/issues"));
+                ui.add(egui::Hyperlink::from_label_and_url("Report an issue", "https://github.com/nanaian/merlon/issues"));
                 ui.add(egui::Hyperlink::from_label_and_url("Source code", "https://github.com/nanaian/merlon"));
                 ui.add(egui::Hyperlink::from_label_and_url("Paper Mario Modding Discord server", "https://discord.gg/paper-mario-modding"));
+
+                ui.add_space(16.0);
             });
         });
 
         /*egui::TopBottomPanel::bottom("bottom_bar").show(ctx, |ui| {
-            // TODO
         });*/
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.spacing_mut().item_spacing.y = 8.0;
+
+                // TODO packages
+            });
+        });
 
         // Collect dropped files
         ctx.input(|i| {
