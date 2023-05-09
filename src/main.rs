@@ -6,6 +6,7 @@ use merlon::package::{Package, InitialisedPackage, Distributable};
 use std::path::PathBuf;
 
 mod new;
+mod gui;
 
 /// Mod package manager for the Paper Mario (N64) decompilation.
 /// 
@@ -63,10 +64,6 @@ enum SubCommand {
 
     /// Add a dependency to the current package.
     Add(merlon::package::init::AddDependencyOptions),
-
-    /// Launch the GUI.
-    #[cfg(feature = "gui")]
-    Gui,
 }
 
 #[derive(Parser, Debug)]
@@ -93,7 +90,8 @@ fn main() -> Result<()> {
     let is_gui = std::env::var("TERM").is_err() || matches!(std::env::var("MERLON_GUI"), Ok(v) if v == "1");
 
     if is_gui {
-        main_gui()
+        main_gui().unwrap(); // error types aren't compatible
+        Ok(())
     } else {
         main_cli()
     }
@@ -111,17 +109,13 @@ fn main_cli() -> Result<()> {
 }
 
 #[cfg(feature = "gui")]
-fn main_gui() -> Result<()> {
-    use klask::Settings;
-
-    klask::run_derived::<Args, _>(Settings::default(), |args| {
-        if let Err(error) = args.run() {
-            // TODO: better error handling, e.g. nativefiledialog
-            eprintln!("{}", error);
-            std::process::exit(1);
-        }
-    });
-    Ok(())
+fn main_gui() -> eframe::Result<()> {
+    let native_options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "Merlon",
+        native_options,
+        Box::new(|cc| Box::new(gui::TemplateApp::new(cc))),
+    )
 }
 
 impl Args {
@@ -242,9 +236,7 @@ impl Args {
                 } else {
                     bail!("cannot add dependency: not in a package directory.");
                 }
-            },
-            #[cfg(feature = "gui")]
-            SubCommand::Gui => main_gui(),
+            }
         }
     }
 }
