@@ -1,0 +1,19 @@
+{
+    "title": "Merlon",
+    "background": "#d4cbf7",
+    "format": "UDBZ",
+    "compression-level": 9,
+    "window": { "position": { "x": 100, "y": 100 },
+                "size": { "width": 640, "height": 300 } },
+    "contents": [
+        { "x": 140, "y": 140, "type": "file", "path": "../../target/release/bundle/osx/Merlon.app" },
+        { "x": 480, "y": 140, "type": "link", "path": "/Applications" }
+    ],
+    "icon": "../logo/merlon-macos-app-icon.icns",
+    "license": {
+        "default-language": "en_US",
+        "licenses": {
+            "en_US": "../../LICENSE"
+        }
+    }
+}

@@ -60,11 +60,10 @@ If you're not sure which to choose, choose the first option.
 Download the appropriate executable for your operating system from the
 [GitHub releases page](https://github.com/nanaian/merlon/releases).
 
-- **Linux** users should download `merlon-linux-x86_64`. This is a static binary that should work on any Linux
-  distribution. If you're not on x86_64, you can [build Merlon from source](advanced/build_source.md) instead.
-- **MacOS** users should download `merlon-macos`. This is a universal binary that works on both Intel and Apple Silicon
-  Macs.
-- **Windows Subsystem for Linux 2** users should download `merlon-linux-x86_64`.
+###### Linux and Windows Subsystem for Linux 2
+
+Download `merlon-linux-x86_64`. This is a static binary that should work on any Linux distribution. If you're not on
+x86_64, you can [build Merlon from source](advanced/build_source.md) instead.
 
 Once downloaded, move the file to somewhere on your PATH and mark it executable. For example:
 
@@ -73,9 +72,20 @@ $ sudo mv ~/Downloads/merlon-linux-x86_64 /usr/local/bin/merlon
 $ sudo chmod +x /usr/local/bin/merlon
 ```
 
-On MacOS you may also need to run `sudo xattr -d com.apple.quarantine /usr/local/bin/merlon` to stop Gatekeeper from
-blocking the executable. This happens because the executable is not signed and I don't want to pay Apple $100/year to
-sign it.
+###### macOS
+
+MacOS users should download `Merlon.dmg`. This is a universal application that works on both Intel and Apple Silicon
+Macs. Once downloaded, open the DMG and drag the Merlon application to your Applications folder.
+
+You can then open the Merlon GUI by double-clicking the application. You may need to right-click and select "Open" the
+first time you run it to bypass the security warning.
+
+To run Merlon from the command line, you'll need to add it to your PATH. To do this, run the following command:
+
+```console
+$ echo 'export PATH="/Applications/Merlon.app/Contents/MacOS:$PATH"' >> ~/.zshrc
+$ source ~/.zshrc
+```
 
 #### Cargo
 

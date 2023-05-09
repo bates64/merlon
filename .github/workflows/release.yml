@@ -42,6 +42,8 @@ jobs:
       with:
         toolchain: stable
         target: x86_64-apple-darwin
+    
+    - run: cargo install cargo-bundle
   
     - name: Build x86_64
       uses: actions-rs/cargo@v1
@@ -59,17 +61,24 @@ jobs:
       with:
         command: build
         args: --release --target aarch64-apple-darwin --all-features
-  
-    - run: ls -l target
+    
+    - name: Bundle .app
+      run: cargo bundle --all-features --format osx --release
 
     - name: Create universal binary
-      run: lipo -create -output merlon target/x86_64-apple-darwin/release/merlon target/aarch64-apple-darwin/release/merlon
+      run: lipo -create -output target/release/bundle/osx/Merlon.app/Contents/MacOS/merlon target/x86_64-apple-darwin/release/merlon target/aarch64-apple-darwin/release/merlon
+    
+    - name: Install dmgbuild
+      run: pip3 install dmgbuild
+    
+    - name: Build DMG
+      run: cd assets/dmg && dmgbuild -s dmgbuild.json "Merlon" Merlon.dmg
 
     - uses: actions/upload-artifact@v3
       with:
         name: merlon-macos
-        path: merlon
-  
+        path: assets/dmg/Merlon.dmg
+
   linux:
     name: Build for Linux
     runs-on: ubuntu-latest
@@ -105,7 +114,7 @@ jobs:
       run: |
         mkdir -p release
         mv merlon-linux-x86_64/merlon release/merlon-linux-x86_64
-        mv merlon-macos/merlon        release/merlon-macos
+        mv merlon-macos/Merlon.dmg        release/Merlon.dmg
 
     - name: Get version from tag
       id: get_version
