@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use merlon::package::Package;
 
+mod support_link;
+
 #[derive(Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct App {
@@ -17,6 +19,10 @@ impl App {
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
+
+        let mut fonts = egui::FontDefinitions::default();
+        egui_phosphor::add_to_fonts(&mut fonts);
+        cc.egui_ctx.set_fonts(fonts);
 
         Default::default()
     }
@@ -54,17 +60,15 @@ impl eframe::App for App {
                 ui.add_space(16.0);
                 ui.heading("Welcome to Merlon"); // TODO: use logotype
 
-                ui.allocate_ui_with_layout(egui::vec2(200.0, 20.0), egui::Layout::from_main_dir_and_cross_align(egui::Direction::LeftToRight, egui::Align::Center), |ui| {
-                    ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
-                    egui::warn_if_debug_build(ui);
-                });
+                ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+                egui::warn_if_debug_build(ui);
 
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 20.0;
-                    ui.add(egui::Hyperlink::from_label_and_url("Documentation", "https://merlon.readthedocs.io/"));
-                    ui.add(egui::Hyperlink::from_label_and_url("Issues", "https://github.com/nanaian/merlon/issues"));
-                    ui.add(egui::Hyperlink::from_label_and_url("Source code", "https://github.com/nanaian/merlon"));
-                });
+                ui.add_space(16.0);
+
+                ui.add(support_link::SupportLink);
+                ui.add(egui::Hyperlink::from_label_and_url("Documentation", "https://merlon.readthedocs.io/"));
+                ui.add(egui::Hyperlink::from_label_and_url("Issues", "https://github.com/nanaian/merlon/issues"));
+                ui.add(egui::Hyperlink::from_label_and_url("Source code", "https://github.com/nanaian/merlon"));
                 ui.add(egui::Hyperlink::from_label_and_url("Paper Mario Modding Discord server", "https://discord.gg/paper-mario-modding"));
             });
         });
