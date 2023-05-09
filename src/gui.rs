@@ -1,33 +1,19 @@
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
-pub struct TemplateApp {
-    // Example stuff:
-    label: String,
+use serde::{Deserialize, Serialize};
+use merlon::package::Package;
 
-    // this how you opt-out of serialization of a member
-    #[serde(skip)]
-    value: f32,
+#[derive(Deserialize, Serialize, Default)]
+#[serde(default)]
+pub struct App {
+    package_state: Option<PackageState>,
 }
 
-impl Default for TemplateApp {
-    fn default() -> Self {
-        Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            value: 2.7,
-        }
-    }
+#[derive(Deserialize, Serialize)]
+pub struct PackageState {
+    package: Package,
 }
 
-impl TemplateApp {
-    /// Called once before the first frame.
+impl App {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        // This is also where you can customize the look and feel of egui using
-        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
-
-        // Load previous app state (if any).
-        // Note that you must enable the `persistence` feature for this to work.
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
@@ -36,7 +22,7 @@ impl TemplateApp {
     }
 }
 
-impl eframe::App for TemplateApp {
+impl eframe::App for App {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
@@ -45,72 +31,53 @@ impl eframe::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let Self { label, value } = self;
-
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
         // Tip: a good default choice is to just keep the `CentralPanel`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
-        #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
-                ui.menu_button("File", |ui| {
-                    if ui.button("Quit").clicked() {
-                        _frame.close();
-                    }
-                });
-            });
-        });
-
-        egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Side Panel");
-
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(label);
-            });
-
-            ui.add(egui::Slider::new(value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                *value += 1.0;
-            }
-
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("powered by ");
-                    ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-                    ui.label(" and ");
-                    ui.hyperlink_to(
-                        "eframe",
-                        "https://github.com/emilk/egui/tree/master/crates/eframe",
-                    );
-                    ui.label(".");
-                });
+        egui::TopBottomPanel::top("top_bar").show(ctx, |ui| {
+            // Draw title bar on macOS
+            #[cfg(target_os = "macos")]
+            ui.vertical_centered(|ui| {
+                ui.set_height(24.0);
+                ui.allocate_space(egui::vec2(0.0, 2.0));
+                ui.label("Merlon");
             });
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            // The central panel the region left after adding TopPanel's and SidePanel's
+            
+            ui.vertical_centered(|ui| {
+                ui.spacing_mut().item_spacing.y = 8.0;
 
-            ui.heading("eframe template");
-            ui.hyperlink("https://github.com/emilk/eframe_template");
-            ui.add(egui::github_link_file!(
-                "https://github.com/emilk/eframe_template/blob/master/",
-                "Source code."
-            ));
-            egui::warn_if_debug_build(ui);
+                ui.add_space(16.0);
+                ui.heading("Welcome to Merlon"); // TODO: use logotype
+
+                ui.allocate_ui_with_layout(egui::vec2(200.0, 20.0), egui::Layout::from_main_dir_and_cross_align(egui::Direction::LeftToRight, egui::Align::Center), |ui| {
+                    ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+                    egui::warn_if_debug_build(ui);
+                });
+
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 20.0;
+                    ui.add(egui::Hyperlink::from_label_and_url("Documentation", "https://merlon.readthedocs.io/"));
+                    ui.add(egui::Hyperlink::from_label_and_url("Issues", "https://github.com/nanaian/merlon/issues"));
+                    ui.add(egui::Hyperlink::from_label_and_url("Source code", "https://github.com/nanaian/merlon"));
+                });
+                ui.add(egui::Hyperlink::from_label_and_url("Paper Mario Modding Discord server", "https://discord.gg/paper-mario-modding"));
+            });
         });
 
-        if false {
-            egui::Window::new("Window").show(ctx, |ui| {
-                ui.label("Windows can be moved by dragging them.");
-                ui.label("They are automatically sized based on contents.");
-                ui.label("You can turn on resizing and scrolling if you like.");
-                ui.label("You would normally choose either panels OR windows.");
-            });
-        }
+        /*egui::TopBottomPanel::bottom("bottom_bar").show(ctx, |ui| {
+            // TODO
+        });*/
+
+        // Collect dropped files
+        ctx.input(|i| {
+            if !i.raw.dropped_files.is_empty() {
+                // TODO: handle them, i.e. open .merlon files, open directories, etc.
+            }
+        });
     }
 }

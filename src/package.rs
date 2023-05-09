@@ -19,6 +19,7 @@ use std::{
 };
 use anyhow::{Result, bail};
 use pyo3::prelude::*;
+use serde::{Serialize, Deserialize, Deserializer, de::Error};
 
 pub mod manifest;
 pub use manifest::{
@@ -42,7 +43,7 @@ pub fn is_unexported_package(path: &Path) -> bool {
 }
 
 /// A package in the form of a directory.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 #[pyclass(module = "merlon.package")]
 pub struct Package {
     path: PathBuf,
@@ -264,6 +265,13 @@ impl Hash for Package {
     // TODO: hash directories with merkle_hash
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.path.hash(state);
+    }
+}
+
+impl<'de> Deserialize<'de> for Package {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let path = PathBuf::deserialize(deserializer)?;
+        Self::try_from(path).map_err(D::Error::custom)
     }
 }
 

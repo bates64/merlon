@@ -110,11 +110,16 @@ fn main_cli() -> Result<()> {
 
 #[cfg(feature = "gui")]
 fn main_gui() -> eframe::Result<()> {
-    let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        drag_and_drop_support: true,
+        fullsize_content: true,
+        min_window_size: Some(egui::vec2(400.0, 300.0)),
+        ..Default::default()
+    };
     eframe::run_native(
         "Merlon",
         native_options,
-        Box::new(|cc| Box::new(gui::TemplateApp::new(cc))),
+        Box::new(|cc| Box::new(gui::App::new(cc))),
     )
 }
 

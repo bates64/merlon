@@ -3,7 +3,7 @@
 [![CI status](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/release.yml?branch=main)](https://github.com/nanaian/merlon/actions)
 [![Documentation](https://img.shields.io/readthedocs/merlon)](https://merlon.readthedocs.io)
 [![Downloads](https://img.shields.io/github/downloads/nanaian/merlon/total)](https://github.com/nanaian/merlon/releases)
-[![Discord invite](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding-279322074412089344)
+[![Discord invite](https://img.shields.io/discord/279322074412089344?color=%237289DA&logo=discord&logoColor=ffffff)](https://discord.gg/paper-mario-modding)
 [![Rust crate](https://img.shields.io/crates/v/merlon)](https://crates.io/crates/merlon)
 [![PyPi package](https://img.shields.io/pypi/v/merlon)](https://pypi.org/project/merlon/)
 
