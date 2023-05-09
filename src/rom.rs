@@ -7,9 +7,16 @@ use std::fmt;
 use sha1::{Sha1, Digest};
 use anyhow::Result;
 use pyo3::prelude::*;
+use serde::{Serialize, Deserialize};
+
+/// The file extensions that are supported to be opened as ROMs.
+pub const EXTENSIONS: &[&str] = &["z64"]; // TODO: auto-convert n64 and v64 to z64
+
+/// The SHA1 hash of the Paper Mario (US) ROM.
+pub const PAPERMARIO_US_SHA1: &str = "3837f44cda784b466c9a2d99df70d77c322b97a0";
 
 /// An N64 ROM file on disk.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 #[pyclass(module = "merlon.rom")]
 pub struct Rom {
     path: PathBuf,

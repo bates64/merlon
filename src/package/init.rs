@@ -184,6 +184,15 @@ impl InitialisedPackage {
             bail!("there is already a decomp clone here - delete the {} directory and try again", SUBREPO_DIR_NAME);
         }
 
+        // Check baserom is valid
+        if !options.baserom.is_file() {
+            bail!("baserom {:?} is not a file", options.baserom);
+        }
+        let rom = Rom::from(options.baserom.clone());
+        if rom.sha1_string().unwrap_or_else(|_| "".to_string()) != crate::rom::PAPERMARIO_US_SHA1 {
+            bail!("baserom {:?} does not match expected SHA1 for unmodified Paper Mario (US)", options.baserom);
+        }
+
         // If rev not provided on command line, use the one in the manifest, otherwise use latest
         let manifest = package.manifest()?;
         let rev = match &options.rev {
@@ -235,10 +244,6 @@ impl InitialisedPackage {
                 .context("failed to create assets subdirectory")?;
 
             // Copy baserom
-            if !options.baserom.is_file() {
-                bail!("baserom {:?} is not a file", options.baserom);
-            }
-            // TODO: check baserom sha1 is valid
             let baserom_path = package.path().join(SUBREPO_DIR_NAME).join("ver/us/baserom.z64");
             copy(options.baserom, &baserom_path)
                 .with_context(|| format!("failed to copy baserom to {:?}", baserom_path))?;

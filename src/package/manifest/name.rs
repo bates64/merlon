@@ -100,6 +100,12 @@ impl TryFrom<&str> for Name {
     }
 }
 
+impl<'name> Into<&'name str> for &'name Name {
+    fn into(self) -> &'name str {
+        &self.0
+    }
+}
+
 impl FromPyObject<'_> for Name {
     fn extract(ob: &PyAny) -> PyResult<Self> {
         let s: String = ob.extract()?;

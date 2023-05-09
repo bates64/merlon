@@ -1,11 +1,12 @@
 use egui::*;
 use egui_extras::RetainedImage;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Formatter};
 
 const PNG_BYTES: &[u8] = include_bytes!("../../assets/logo/logotype.png");
 
 /// Merlon logotype. Displays a heading if the image fails to load.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Logotype {
     state: State,
 }
@@ -64,5 +65,15 @@ impl<'de> Deserialize<'de> for Logotype {
 impl Default for State {
     fn default() -> Self {
         State::Unloaded
+    }
+}
+
+impl Debug for State {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            State::Unloaded => write!(f, "Unloaded"),
+            State::Failed => write!(f, "Failed"),
+            State::Loaded { .. } => write!(f, "Loaded"),
+        }
     }
 }

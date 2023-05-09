@@ -80,7 +80,7 @@ pub struct ApplyOptions {
 }
 
 /// Options for [`Distributable::open_to_dir`].
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 #[pyclass(module = "merlon.package.distribute")]
 pub struct OpenOptions {
     /// The output directory to write the package source code to.
