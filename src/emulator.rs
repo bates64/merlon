@@ -26,6 +26,7 @@ fn find_emulator() -> Result<PathBuf> {
         "/usr/bin/mupen64plus",
         "/usr/bin/retroarch",
         "C:\\Program Files (x86)\\Project64 2.3\\Project64.exe",
+        "C:\\Program Files (x86)\\Project64 3.0\\Project64.exe",
     ];
 
     for path in EMULATOR_PATHS {
