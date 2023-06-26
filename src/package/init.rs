@@ -1,5 +1,5 @@
 //! A package is considered "initialised" when it has the following additional directory structure.
-//! 
+//!
 //! package/
 //! ├── ...
 //! ├── .merlon/
@@ -22,17 +22,17 @@
 //!
 //! Being initialised means that the package is ready to be built.
 
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::fs::{create_dir, create_dir_all, remove_dir_all, write, copy, remove_file};
-use anyhow::{Result, Error, bail, anyhow, Context};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use clap::Parser;
+use pyo3::prelude::*;
 use scopeguard::defer;
 use semver::VersionReq;
-use pyo3::prelude::*;
+use std::fs::{copy, create_dir, create_dir_all, remove_dir_all, remove_file, write};
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 
 use super::manifest::Dependency;
-use super::{Package, Id, Registry, PATCHES_DIR_NAME, Distributable};
+use super::{Distributable, Id, Package, Registry, PATCHES_DIR_NAME};
 use crate::rom::Rom;
 
 const MERLON_DIR_NAME: &str = ".merlon";
@@ -59,11 +59,11 @@ pub struct InitialiseOptions {
     pub baserom: PathBuf,
 
     /// Git revision of decomp to use.
-    /// 
+    ///
     /// If not provided, the latest commit on `main` is used.
     #[arg(long)]
     #[pyo3(get, set)]
-    pub rev: Option<String>,   
+    pub rev: Option<String>,
 }
 
 /// Options for [`InitialisedPackage::build_rom`].
@@ -101,7 +101,10 @@ pub struct AddDependencyOptions {
 #[pymethods]
 impl Package {
     /// Initialises this package if needed, and returns an InitialisedPackage.
-    pub fn to_initialised(&self, initialise_options: InitialiseOptions) -> Result<InitialisedPackage> {
+    pub fn to_initialised(
+        &self,
+        initialise_options: InitialiseOptions,
+    ) -> Result<InitialisedPackage> {
         if InitialisedPackage::is_initialised(self)? {
             InitialisedPackage::from_initialised(self.clone())
         } else {
@@ -181,7 +184,10 @@ impl InitialisedPackage {
         }
         // https://github.com/nanaian/merlon/issues/25
         if package.path().join(SUBREPO_DIR_NAME).exists() {
-            bail!("there is already a decomp clone here - delete the {} directory and try again", SUBREPO_DIR_NAME);
+            bail!(
+                "there is already a decomp clone here - delete the {} directory and try again",
+                SUBREPO_DIR_NAME
+            );
         }
 
         // If rev not provided on command line, use the one in the manifest, otherwise use latest
@@ -198,8 +204,7 @@ impl InitialisedPackage {
 
             // Clone decomp subrepo
             let mut command = Command::new("git");
-            command
-                .arg("clone");
+            command.arg("clone");
             // If we're not using a specific revision, only clone the latest commit
             if rev.is_none() {
                 command.arg("--depth=1");
@@ -231,15 +236,24 @@ impl InitialisedPackage {
             }
 
             // Create assets dir for this mod
-            create_dir_all(package.path().join(SUBREPO_DIR_NAME).join("assets").join(&package_id_string))
-                .context("failed to create assets subdirectory")?;
+            create_dir_all(
+                package
+                    .path()
+                    .join(SUBREPO_DIR_NAME)
+                    .join("assets")
+                    .join(&package_id_string),
+            )
+            .context("failed to create assets subdirectory")?;
 
             // Copy baserom
             if !options.baserom.is_file() {
                 bail!("baserom {:?} is not a file", options.baserom);
             }
             // TODO: check baserom sha1 is valid
-            let baserom_path = package.path().join(SUBREPO_DIR_NAME).join("ver/us/baserom.z64");
+            let baserom_path = package
+                .path()
+                .join(SUBREPO_DIR_NAME)
+                .join("ver/us/baserom.z64");
             copy(options.baserom, &baserom_path)
                 .with_context(|| format!("failed to copy baserom to {:?}", baserom_path))?;
 
@@ -251,14 +265,26 @@ impl InitialisedPackage {
             let vscode_dir = package.path().join(VSCODE_DIR_NAME);
             create_dir(&vscode_dir)
                 .with_context(|| format!("failed to create {} directory", vscode_dir.display()))?;
-            write(vscode_dir.join("c_cpp_properties.json"), include_str!("../../templates/.vscode/c_cpp_properties.json"))
-                .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/c_cpp_properties.json"))?;
-            write(vscode_dir.join("extensions.json"), include_str!("../../templates/.vscode/extensions.json"))
-                .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/extensions.json"))?;
-            write(vscode_dir.join("settings.json"), include_str!("../../templates/.vscode/settings.json"))
-                .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/settings.json"))?;
-            write(vscode_dir.join("tasks.json"), include_str!("../../templates/.vscode/tasks.json"))
-                .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/tasks.json"))?;
+            write(
+                vscode_dir.join("c_cpp_properties.json"),
+                include_str!("../../templates/.vscode/c_cpp_properties.json"),
+            )
+            .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/c_cpp_properties.json"))?;
+            write(
+                vscode_dir.join("extensions.json"),
+                include_str!("../../templates/.vscode/extensions.json"),
+            )
+            .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/extensions.json"))?;
+            write(
+                vscode_dir.join("settings.json"),
+                include_str!("../../templates/.vscode/settings.json"),
+            )
+            .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/settings.json"))?;
+            write(
+                vscode_dir.join("tasks.json"),
+                include_str!("../../templates/.vscode/tasks.json"),
+            )
+            .with_context(|| format!("failed to create {VSCODE_DIR_NAME}/tasks.json"))?;
 
             // Create gitignore file if it doesn't exist
             let gitignore_path = package.path().join(GITIGNORE_FILE_NAME);
@@ -268,28 +294,52 @@ impl InitialisedPackage {
             }
 
             // Run decomp install.sh
-            let status = Command::new("bash")
-                .arg("install.sh")
-                .current_dir(package.path().join(SUBREPO_DIR_NAME))
-                .status()?;
-            if !status.success() {
-                bail!("failed to run decomp install.sh");
+            if package
+                .path()
+                .join(SUBREPO_DIR_NAME)
+                .join("install.sh")
+                .is_file() {
+                let status = Command::new("bash")
+                    .arg("install.sh")
+                    .current_dir(package.path().join(SUBREPO_DIR_NAME))
+                    .status()?;
+                if !status.success() {
+                    bail!("failed to run decomp install.sh");
+                }
+            } else {
+                let status = Command::new("bash")
+                    .arg("install_deps.sh")
+                    .current_dir(package.path().join(SUBREPO_DIR_NAME))
+                    .status()?;
+                if !status.success() {
+                    bail!("failed to run decomp install_deps.sh");
+                }
+
+                let status = Command::new("bash")
+                    .arg("install_compilers.sh")
+                    .current_dir(package.path().join(SUBREPO_DIR_NAME))
+                    .status()?;
+                if !status.success() {
+                    bail!("failed to run decomp install_compilers.sh");
+                }
             }
 
             let initialised = Self::from_initialised(package)?;
 
             // Add decomp as dependency
             let main_head = initialised.git_head_commit()?;
-            initialised.package().edit_manifest(|manifest| {
-                manifest.upsert_decomp_dependency(main_head)
-            })?;
+            initialised
+                .package()
+                .edit_manifest(|manifest| manifest.upsert_decomp_dependency(main_head))?;
 
             // In case there are patches in the package already, apply them
             // i.e. sync patches ---> repo
             let branch_name = initialised.package_id().to_string();
             initialised.git_create_branch(&branch_name)?;
             initialised.git_checkout_branch(&branch_name)?;
-            initialised.package().apply_patches_to_decomp_repo(&initialised.subrepo_path())?;
+            initialised
+                .package()
+                .apply_patches_to_decomp_repo(&initialised.subrepo_path())?;
 
             // Load dependency patches
             initialised.setup_git_branches()?;
@@ -304,7 +354,7 @@ impl InitialisedPackage {
                 let _ = remove_dir_all(path_clone.join(VSCODE_DIR_NAME));
                 let _ = remove_file(path_clone.join(GITIGNORE_FILE_NAME));
                 Err(e).context(error_context)
-            },
+            }
             result => result,
         }
     }
@@ -339,7 +389,7 @@ impl InitialisedPackage {
 
     /// Update the decomp repository so that all dependencies and patches are applied.
     /// Also updates the patches directory if needed.
-    /// 
+    ///
     /// This will recreate the dependency tree in the subrepo, where each dependency has a branch.
     /// Additionally, a branch will be created for this package if it doesn't exist, and the branch will be off of
     /// the branches that this package directly depends on.
@@ -373,7 +423,7 @@ impl InitialisedPackage {
                         patch: Some(version.patch),
                         pre: version.pre.clone(),
                     }],
-                }
+                },
             });
             deps
         };
@@ -434,18 +484,14 @@ impl InitialisedPackage {
             if options.clean {
                 command.arg("--clean");
             }
-            let status = command
-                .current_dir(&dir)
-                .status()?;
+            let status = command.current_dir(&dir).status()?;
             if !status.success() {
                 bail!("failed to configure");
             }
         }
 
         // Build
-        let status = Command::new("ninja")
-            .current_dir(&dir)
-            .status()?;
+        let status = Command::new("ninja").current_dir(&dir).status()?;
         if !status.success() {
             bail!("failed to build");
         }
@@ -478,36 +524,38 @@ impl InitialisedPackage {
 
         // Figure out which branch to diff against.
         // We want to diff against the nearest dependency, but if that doesn't exist, we want to diff against main.
-        let branch_order =
-            std::iter::once("main".to_string())
-                .chain(
-                    self.registry()
-                        .calc_dependency_patch_order(self.package_id)?
-                        .into_iter()
-                        .map(|id| id.to_string())
-                );
+        let branch_order = std::iter::once("main".to_string()).chain(
+            self.registry()
+                .calc_dependency_patch_order(self.package_id)?
+                .into_iter()
+                .map(|id| id.to_string()),
+        );
         let mut diff_against = None;
         for branch in branch_order.rev() {
             if branch != package_id_str && self.git_branch_exists(&branch)? {
                 diff_against = Some(branch);
                 break;
             }
-        };
+        }
         let diff_against = diff_against.ok_or_else(|| anyhow!("no branch to diff against"))?;
         let diff_against_package_name = match diff_against.as_str() {
             "main" => "Paper Mario (N64) decompilation".to_string(),
             _ => {
                 let package = self.registry.get_or_error(diff_against.parse()?)?;
                 format!("{}", package)
-            },
+            }
         };
-        log::info!("saving patches since dependency: {}", &diff_against_package_name);
+        log::info!(
+            "saving patches since dependency: {}",
+            &diff_against_package_name
+        );
 
         // Create patches
         let status = Command::new("git")
             .arg("format-patch")
             .arg(format!("{}..HEAD", diff_against))
-            .arg("-o").arg(&dir.canonicalize()?)
+            .arg("-o")
+            .arg(&dir.canonicalize()?)
             .arg("--minimal")
             .arg("--binary")
             .arg("--ignore-cr-at-eol")
@@ -550,11 +598,15 @@ impl InitialisedPackage {
     pub fn add_dependency(&mut self, options: AddDependencyOptions) -> Result<Id> {
         let path = options.path;
         let dependencies_dir = self.package().path().join(DEPENDENCIES_DIR_NAME);
-        create_dir_all(&dependencies_dir)
-            .with_context(|| format!("failed to create dependencies dir {}", dependencies_dir.display()))?;
+        create_dir_all(&dependencies_dir).with_context(|| {
+            format!(
+                "failed to create dependencies dir {}",
+                dependencies_dir.display()
+            )
+        })?;
         let package = if super::is_unexported_package(&path) {
-            let package = Package::try_from(path)
-                .context("failed to open dependency as package")?;
+            let package =
+                Package::try_from(path).context("failed to open dependency as package")?;
 
             // Could also do symbolic link?
             let path = dependencies_dir.join(package.id()?.to_string());
@@ -562,7 +614,8 @@ impl InitialisedPackage {
                 log::info!("dependency directory already exists, updating it");
                 remove_dir_all(&path)?;
             }
-            let package = package.clone_to_dir(path)
+            let package = package
+                .clone_to_dir(path)
                 .context("failed to clone package to dependencies dir")?;
 
             // If package has any dependencies in its directory we don't have, add them too
@@ -581,7 +634,8 @@ impl InitialisedPackage {
         } else if super::distribute::is_distributable_package(&path) {
             let distributable = Distributable::try_from(path)
                 .context("failed to open dependency as distributable")?;
-            let manifest = distributable.manifest(self.baserom_path())
+            let manifest = distributable
+                .manifest(self.baserom_path())
                 .context("failed to read dependency manifest")?;
             let package_id = manifest.metadata().id().to_string();
             let path = dependencies_dir.join(package_id);
@@ -589,12 +643,17 @@ impl InitialisedPackage {
                 log::info!("dependency directory already exists, updating it");
                 remove_dir_all(&path).context("failed to remove existing dependency directory")?;
             }
-            distributable.open_to_dir(super::distribute::OpenOptions {
-                output: Some(path),
-                baserom: self.baserom_path(),
-            }).context("failed to open distributable to dependencies dir")?
+            distributable
+                .open_to_dir(super::distribute::OpenOptions {
+                    output: Some(path),
+                    baserom: self.baserom_path(),
+                })
+                .context("failed to open distributable to dependencies dir")?
         } else {
-            bail!("not a package directory or distributable file: {}", path.display());
+            bail!(
+                "not a package directory or distributable file: {}",
+                path.display()
+            );
         };
         log::info!("adding dependency: {}", package);
         let id = package.id()?;
@@ -602,12 +661,13 @@ impl InitialisedPackage {
             true => id,
             false => self.registry.register(package)?,
         };
-        let dependency: Dependency = self.registry.get_or_error(id)
+        let dependency: Dependency = self
+            .registry
+            .get_or_error(id)
             .context("dependency not added to registry correctly")?
             .try_into()?;
-        self.package().edit_manifest(move |manifest| {
-            manifest.declare_direct_dependency(dependency)
-        })?;
+        self.package()
+            .edit_manifest(move |manifest| manifest.declare_direct_dependency(dependency))?;
         Ok(id)
     }
 }
@@ -615,7 +675,9 @@ impl InitialisedPackage {
 impl InitialisedPackage {
     /// The package that this InitialisedPackage was created from.
     pub fn package(&self) -> &Package {
-        self.registry.get(self.package_id).expect("package somehow removed from registry")
+        self.registry
+            .get(self.package_id)
+            .expect("package somehow removed from registry")
     }
 
     /// The registry of packages. Includes dependencies of the package.
@@ -757,9 +819,8 @@ impl InitialisedPackage {
 
         // Update decomp dependency in manifest
         let main_head = self.git_head_commit()?;
-        self.package().edit_manifest(|manifest| {
-            manifest.upsert_decomp_dependency(main_head)
-        })
+        self.package()
+            .edit_manifest(|manifest| manifest.upsert_decomp_dependency(main_head))
     }
 
     fn git_head_commit(&self) -> Result<String> {
