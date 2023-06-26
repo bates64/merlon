@@ -269,11 +269,19 @@ impl InitialisedPackage {
 
             // Run decomp install.sh
             let status = Command::new("bash")
-                .arg("install.sh")
+                .arg("install_deps.sh")
                 .current_dir(package.path().join(SUBREPO_DIR_NAME))
                 .status()?;
             if !status.success() {
-                bail!("failed to run decomp install.sh");
+                bail!("failed to run decomp install_deps.sh");
+            }
+
+            let status_install = Command::new("bash")
+                .arg("install_compilers.sh")
+                .current_dir(package.path().join(SUBREPO_DIR_NAME))
+                .status()?;
+            if !status_install.success() {
+                bail!("failed to run decomp install_compilers.sh");
             }
 
             let initialised = Self::from_initialised(package)?;
