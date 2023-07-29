@@ -197,18 +197,6 @@ impl Package {
             .args(patch_files.iter().map(|path| path.to_string_lossy().to_string()))
             .current_dir(&repo)
             .status()?;
-        if !status.success() {
-            // The merge failed! Abort the merge and tell the user to fix it.
-            let status = Command::new("git")
-                .arg("am")
-                .arg("--abort")
-                .current_dir(&repo)
-                .status()?;
-            if !status.success() {
-                panic!("failed to abort merge");
-            }
-            bail!("failed to apply patches");
-        }
         Ok(())
     }
 
