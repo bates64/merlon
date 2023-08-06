@@ -198,7 +198,6 @@ impl Package {
             .current_dir(&repo)
             .status()?;
         if !status.success() {
-            // The merge failed! Abort the merge and tell the user to fix it.
             log::warn!("Failed to merge. Resolve merge conflicts (either using `git mergetool` or vscode's merge editor) and commit them to continue.");
         }   
         Ok(())
