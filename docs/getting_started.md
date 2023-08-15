@@ -82,7 +82,7 @@ sign it.
 If you already have Rust installed, you can install Merlon using Cargo:
 
 ```console
-$ cargo install merlon
+$ cargo install --git https://github.com/nanaian/merlon
 ```
 
 ### Verifying the installation
