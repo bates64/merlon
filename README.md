@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> If you're looking to romhack Paper Mario, please see https://docs.starhaven.dev. Merlon is an older project and might get revisited in the future.
+
 # [![Merlon](assets/logo/logotype.png)](https://merlon.readthedocs.io)
 
 [![CI status](https://img.shields.io/github/actions/workflow/status/nanaian/merlon/release.yml?branch=main)](https://github.com/nanaian/merlon/actions)
